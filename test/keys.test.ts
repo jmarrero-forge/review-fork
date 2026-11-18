@@ -77,7 +77,7 @@ describe("parseRoute", () => {
     ["#item/PVTI_abc-_1", { route: "item", id: "PVTI_abc-_1" }],
     ["#item/I_kwDOP9abcd", { route: "item", id: "I_kwDOP9abcd" }],
     ["#item/X_abc", { route: "home" }],
-    ["#pr/cgwalters-forge/bootc/30", { route: "pr", ref: { owner: "cgwalters-forge", repo: "bootc", number: 30 } }],
+    ["#pr/jmarrero-forge/bootc/30", { route: "pr", ref: { owner: "jmarrero-forge", repo: "bootc", number: 30 } }],
     ["#pr/o/r.s_t/1", { route: "pr", ref: { owner: "o", repo: "r.s_t", number: 1 } }],
     ["#pr/o/r/0", { route: "home" }],
     ["#pr/o/../1", { route: "home" }],
@@ -116,14 +116,14 @@ describe("parseRoute", () => {
 describe("item deep-link reads outside the needs-you queue", () => {
   const id = "PVTI_lADOE9oHIs4BlJLczhENIh0";
   // Synthetic content for the tracker#786 regression; no live GitHub reads.
-  const content = { __typename: "Issue", id: "I_example786", title: "An in-progress epic", body: "Epic context", url: "https://github.com/cgwalters-forge/tracker/issues/786", state: "OPEN", labels: { nodes: [{ name: "epic" }] }, subIssuesSummary: { total: 3, completed: 1, percentCompleted: 33 } };
-  const board = { id, project: { number: 1, owner: { login: "cgwalters-forge" } }, fieldValues: { nodes: [
+  const content = { __typename: "Issue", id: "I_example786", title: "An in-progress epic", body: "Epic context", url: "https://github.com/jmarrero-forge/tracker/issues/786", state: "OPEN", labels: { nodes: [{ name: "epic" }] }, subIssuesSummary: { total: 3, completed: 1, percentCompleted: 33 } };
+  const board = { id, project: { number: 1, owner: { login: "jmarrero-forge" } }, fieldValues: { nodes: [
     { name: "In Progress", field: { name: "Status" } },
     { name: "P0", field: { name: "Priority" } },
     { text: "Keep this context", field: { name: "Why" } },
   ] } };
   const issue = { ...content, projectItems: { nodes: [board], pageInfo: { hasNextPage: false } } };
-  const refHash = "#issue/CGWalters-Forge/tracker/786";
+  const refHash = "#issue/JMarrero-Forge/tracker/786";
 
   async function read(hash: string, data: unknown) {
     const route = parseRoute(hash);

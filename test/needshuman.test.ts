@@ -14,7 +14,7 @@ const win = installDom();
 const render = createRenderer(win as unknown as Parameters<typeof createRenderer>[0]);
 const AT = "2026-11-06T12:00:00Z";
 const NOW = Date.parse(AT);
-const ORG = "cgwalters-forge";
+const ORG = "jmarrero-forge";
 const BOARD = `${ORG}/agent-board`;
 const issue = (repo: string, n: number) => ({ html_url: `https://github.com/${repo}/issues/${n}`, title: `Issue ${n}` });
 

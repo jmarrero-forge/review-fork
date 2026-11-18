@@ -12,19 +12,19 @@ const LISTED = 58;
 
 export function needsYou174(variant: Variant = "full") {
   const at = "2026-10-30T12:00:00Z";
-  const epic = "cgwalters-forge/tracker#976";
-  const inactive = "cgwalters-forge/tracker#900";
+  const epic = "jmarrero-forge/tracker#976";
+  const inactive = "jmarrero-forge/tracker#900";
   const grouped = variant === "grouped";
   const items = Array.from({ length: 174 }, (_, i) => {
     const approve = i === 173 || (grouped && i === LISTED);
     const number = i === 173 ? 1367 : 2000 + i;
-    const item = `cgwalters-forge/tracker#${number}`;
+    const item = `jmarrero-forge/tracker#${number}`;
     const head = approve ? "a".repeat(40) : null;
-    const action = { type: approve ? "approve_pull_request" : "issue", repository: "cgwalters-forge/tracker", number, ...(head ? { head } : {}) };
-    const detailKey = grouped && !approve ? `cgwalters-forge/tracker#${2000 + i - (i % GROUP)}` : item;
+    const action = { type: approve ? "approve_pull_request" : "issue", repository: "jmarrero-forge/tracker", number, ...(head ? { head } : {}) };
+    const detailKey = grouped && !approve ? `jmarrero-forge/tracker#${2000 + i - (i % GROUP)}` : item;
     return { key: item, item, detail_key: detailKey, source: approve ? "reviews" : "items", kind: approve ? "review-approve" : "needs-human", priority: approve ? "P2" : "P1",
       waiting_since: at, ask: i === 173 ? "Approve the operator-path PR to release 21 stale holds" : `Choose the next step for item ${number}`,
-      recommendation: null, target: `https://github.com/cgwalters-forge/tracker/${approve ? "pull" : "issues"}/${number}`, head,
+      recommendation: null, target: `https://github.com/jmarrero-forge/tracker/${approve ? "pull" : "issues"}/${number}`, head,
       action, source_ref: { ...action, type: approve ? "pull_request" : "hold" }, epic: approve ? inactive : epic, topEpic: approve ? inactive : epic };
   });
   const listed = variant === "capped" ? [...items.slice(0, 12), items[173]!] : grouped ? [...items.slice(0, LISTED + 1), items[173]!] : items;

@@ -14,8 +14,8 @@ it("keeps README as a short entry point to the website and checkout docs", () =>
   const readme = readFileSync(new URL("README.md", root), "utf8");
   assert.ok(readme.split("\n").length <= 20);
   assert.match(readme, /^# Control app\n\n> This text is LLM generated\./);
-  assert.match(readme, /\]\(https:\/\/cgwalters-forge\.github\.io\/review\/\)/);
-  assert.match(readme, /\]\(https:\/\/cgwalters-forge\.github\.io\/review\/docs\/\)/);
+  assert.match(readme, /\]\(https:\/\/jmarrero\.github\.io\/review\/\)/);
+  assert.match(readme, /\]\(https:\/\/jmarrero\.github\.io\/review\/docs\/\)/);
   assert.match(readme, /\]\(docs\/index\.md\)/);
   assert.match(readme, /\]\(LICENSE-MIT\)/);
   assert.match(readme, /\]\(LICENSE-APACHE\)/);
@@ -62,7 +62,7 @@ it("publishes every documentation page with working local links and heading frag
     }
     const index = readFileSync(join(out, "docs/index.html"), "utf8");
     assert.match(index, /href="design.html"/);
-    assert.match(index, /href="https:\/\/github.com\/cgwalters-forge\/review\/blob\/main\/AGENTS.md"/);
+    assert.match(index, /href="https:\/\/github.com\/jmarrero\/review\/blob\/main\/AGENTS.md"/);
     assert.match(index, /href="\.\.\/"/);
   } finally {
     rmSync(out, { recursive: true, force: true });

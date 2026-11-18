@@ -31,8 +31,8 @@ describe("parseUnblocks", () => {
   const cases: [string, string, string[]][] = [
     [
       "a list after the line, as bot-board writes it",
-      "Blocks: https://github.com/cgwalters-forge/tracker/issues/1\n\nUnblocks:\n- https://github.com/cgwalters-forge/bootc/pull/15\n- https://github.com/bootc-dev/bootc/pull/2516\n\nQ: Promote now?",
-      ["https://github.com/cgwalters-forge/bootc/pull/15", "https://github.com/bootc-dev/bootc/pull/2516"],
+      "Blocks: https://github.com/jmarrero-forge/tracker/issues/1\n\nUnblocks:\n- https://github.com/jmarrero-forge/bootc/pull/15\n- https://github.com/bootc-dev/bootc/pull/2516\n\nQ: Promote now?",
+      ["https://github.com/jmarrero-forge/bootc/pull/15", "https://github.com/bootc-dev/bootc/pull/2516"],
     ],
     [
       "on the line, comma separated, in code spans, duplicates dropped",
@@ -53,13 +53,13 @@ describe("parseUnblocks", () => {
 
 describe("parseDecision", () => {
   const body = [
-    "Blocks: https://github.com/cgwalters-forge/tracker/issues/160",
+    "Blocks: https://github.com/jmarrero-forge/tracker/issues/160",
     "",
     "Declaring stable while upgrades break invites bug reports.",
     "",
     "Unblocks:",
-    "- https://github.com/cgwalters-forge/bootc/pull/15",
-    "- https://github.com/cgwalters-forge/tracker/issues/160",
+    "- https://github.com/jmarrero-forge/bootc/pull/15",
+    "- https://github.com/jmarrero-forge/tracker/issues/160",
     "",
     "Q: Promote forge bootc#15 now, or after bootc#2516?",
     "",
@@ -89,7 +89,7 @@ describe("parseDecision", () => {
       ],
     );
     assert.equal(d.question.optionsProblem, undefined);
-    assert.deepEqual(d.unblocks, ["https://github.com/cgwalters-forge/bootc/pull/15", "https://github.com/cgwalters-forge/tracker/issues/160"]);
+    assert.deepEqual(d.unblocks, ["https://github.com/jmarrero-forge/bootc/pull/15", "https://github.com/jmarrero-forge/tracker/issues/160"]);
   });
 
   it("keeps a title without a D-number whole", () => {
@@ -107,8 +107,8 @@ describe("parseDecision", () => {
 
 describe("shortRef", () => {
   const cases: [string, string][] = [
-    ["https://github.com/cgwalters-forge/tracker/issues/12", "tracker#12"],
-    ["https://github.com/cgwalters-forge/bootc/pull/15", "forge bootc#15"],
+    ["https://github.com/jmarrero-forge/tracker/issues/12", "tracker#12"],
+    ["https://github.com/jmarrero-forge/bootc/pull/15", "forge bootc#15"],
     ["https://github.com/bootc-dev/bootc/pull/2516", "bootc#2516"],
     ["https://gist.github.com/x/abc", "https://gist.github.com/x/abc"],
   ];

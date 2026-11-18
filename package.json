@@ -1,7 +1,7 @@
 {
   "name": "review",
   "private": true,
-  "description": "Control app for cgwalters-bot's Workstream board",
+  "description": "Control app for jmarrero-bot's Workstream board",
   "type": "module",
   "bin": {
     "review-queue": "dist-cli/review-queue.js",

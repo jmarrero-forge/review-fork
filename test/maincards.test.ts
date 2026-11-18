@@ -9,6 +9,7 @@ import { type Card, inboxCards, publishedCards, refusal } from "../src/github/in
 import { fillInbox } from "../src/github/inboxview.ts";
 import { fillState, homeSkeleton } from "../src/github/homeview.ts";
 import { newestDraft, type ReviewDraftConfig } from "../src/github/reviewdrafts.ts";
+import { CHAT_CONFIG } from "../src/github/chatconfig.ts";
 import { fields, fixture, rawAsk, rawNeedsYou, scriptedFetch, type Scripted } from "./helpers.ts";
 
 const dom = new JSDOM(readFileSync(new URL("../static/index.html", import.meta.url), "utf8"), { url: "https://review.example/" });
@@ -17,9 +18,9 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, N
 dom.window.confirm = () => true;
 const { inboxHooks, snapshot } = await import("../src/github/main.ts");
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-const target = "cgwalters-forge/tracker#50";
-const url = "https://github.com/cgwalters-forge/tracker/issues/50";
-const path = "/repos/cgwalters-forge/tracker/issues/50";
+const target = "jmarrero-forge/tracker#50";
+const url = "https://github.com/jmarrero-forge/tracker/issues/50";
+const path = "/repos/jmarrero-forge/tracker/issues/50";
 const head = "a".repeat(40);
 const replacement = "b".repeat(40);
 
@@ -42,7 +43,7 @@ for (const cached of [false, true]) test(`browser snapshot retains ${cached ? "c
 const approvalFixture = fixture<{ rows: { key: string; head: string }[]; approval_evidence: { schema: string; observed_at: string; omitted: number; items: Record<string, Omit<ApprovalEvidence, "observed_at">> } }>("approval-evidence-needs-you.json");
 function approvalPublication(extension: unknown = approvalFixture.approval_evidence, over: Record<string, unknown> = {}) {
   const items = approvalFixture.rows.map((row) => rawAsk(Number(row.key.split("#")[1]), { key: row.key, item: row.key, source: "reviews", kind: "review-approve", epic: "none", topEpic: "none",
-    action: { type: "approve_pull_request", repository: "cgwalters-forge/tracker", number: Number(row.key.split("#")[1]), head: row.head } }));
+    action: { type: "approve_pull_request", repository: "jmarrero-forge/tracker", number: Number(row.key.split("#")[1]), head: row.head } }));
   const parsed = parseNeedsYou(JSON.parse(JSON.stringify(rawNeedsYou(items, "2026-11-05T12:00:00Z", { approval_evidence: extension, ...over }))));
   assert.ok(typeof parsed === "object");
   return parsed;
@@ -153,15 +154,15 @@ for (const [name, requests, navigation] of [
 
 const bucketFixture = fixture("draft-review-needs-you.json") as { schema: string; group: { reason: string; numbers: number[] }; review_buckets: Record<string, ReviewBucket> };
 function bucketCard(over: Record<string, unknown> = {}, askOver: Record<string, unknown> = {}): Card {
-  const a = rawAsk(1, { key: "cgwalters-forge/bootc#1", item: "cgwalters-forge/bootc#1", source: "reviews", kind: "review-promote",
-    action: { type: "pull_request", repository: "cgwalters-forge/bootc", number: 1 }, group: bucketFixture.group, ...askOver });
+  const a = rawAsk(1, { key: "jmarrero-forge/bootc#1", item: "jmarrero-forge/bootc#1", source: "reviews", kind: "review-promote",
+    action: { type: "pull_request", repository: "jmarrero-forge/bootc", number: 1 }, group: bucketFixture.group, ...askOver });
   // The shared producer fixture is a projection, not a full publication.
   // Supply the unchanged baseline envelope and consume its schema verbatim.
   const list = parseNeedsYou(JSON.parse(JSON.stringify(rawNeedsYou([a], "2026-11-05T00:00:00Z", { ...bucketFixture, ...over }))));
   assert.equal(typeof list, "object");
   return publishedCards((list as Exclude<typeof list, string>).items)[0]!;
 }
-const bootcDraft = (n: number) => ({ ...draft(n, n === 2 ? replacement : head), html_url: `https://github.com/cgwalters-forge/bootc/pull/${n}` });
+const bootcDraft = (n: number) => ({ ...draft(n, n === 2 ? replacement : head), html_url: `https://github.com/jmarrero-forge/bootc/pull/${n}` });
 const shown = () => ({ title: "Which way?", body: "Q: Which way?", state: "open", html_url: url, labels: [{ name: "needs-human" }, { name: "needs-design" }, { name: "other" }] });
 /** The pass's asks of `raw`. */
 function asks(...raw: Record<string, unknown>[]): Ask[] {
@@ -173,8 +174,8 @@ function asks(...raw: Record<string, unknown>[]): Ask[] {
 const cards = (...raw: Record<string, unknown>[]): Card[] => publishedCards(asks(...raw));
 /** The pass's hold on tracker#50, as its card. */
 const answerCard = (kind = "needs-human"): Card => cards(rawAsk(50, { kind, ask: "Which way?" }))[0]!;
-const questionIssue = () => ({ ...shown(), labels: [{ name: "question" }, ...shown().labels], user: { login: "cgwalters-bot" }, assignees: [{ login: "cgwalters" }] });
-function setup(route: (method: string, path: string) => Scripted | undefined, login = "cgwalters", drafts?: ReviewDraftConfig) {
+const questionIssue = () => ({ ...shown(), labels: [{ name: "question" }, ...shown().labels], user: { login: "jmarrero-bot" }, assignees: [{ login: "jmarrero" }] });
+function setup(route: (method: string, path: string) => Scripted | undefined, login = "jmarrero", drafts?: ReviewDraftConfig) {
   const f = scriptedFetch((method, url) => new URL(url).pathname === "/user" ? { body: { login } } : route(method, new URL(url).pathname) ?? (new URL(url).pathname === "/graphql" ? { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [] } } } } } } : undefined));
   const state = { gh: new GitHub(async () => "test", f.fetchImpl) } as Parameters<typeof inboxHooks>[0];
   state.items = [];
@@ -207,8 +208,8 @@ async function answer(opts: { login?: string; after?: boolean; fail?: "comment" 
   return { r, card, form };
 }
 
-const promotion = () => cards(rawAsk(7, { key: "cgwalters-forge/widget#7", kind: "review-promote", action: { type: "pull_request", repository: "cgwalters-forge/widget", number: 7 }, group: { reason: "drafts", numbers: [7, 8] } }))[0]!;
-const draft = (n: number, sha = head) => ({ html_url: `https://github.com/cgwalters-forge/widget/pull/${n}`, title: `Draft ${n}`, state: "open", draft: true, user: { login: "cgwalters-bot" }, head: { sha }, body: "<!-- bot-meta -->\n- Upstream: `up/widget`\n<!-- /bot-meta -->" });
+const promotion = () => cards(rawAsk(7, { key: "jmarrero-forge/widget#7", kind: "review-promote", action: { type: "pull_request", repository: "jmarrero-forge/widget", number: 7 }, group: { reason: "drafts", numbers: [7, 8] } }))[0]!;
+const draft = (n: number, sha = head) => ({ html_url: `https://github.com/jmarrero-forge/widget/pull/${n}`, title: `Draft ${n}`, state: "open", draft: true, user: { login: "jmarrero-bot" }, head: { sha }, body: "<!-- bot-meta -->\n- Upstream: `up/widget`\n<!-- /bot-meta -->" });
 async function openMember(r: ReturnType<typeof setup>, n = 0) {
   const d = r.list.querySelectorAll<HTMLDetailsElement>(".member")[n]!;
   d.open = true;
@@ -270,7 +271,7 @@ for (const failure of ["head", "race", "viewer", "membership", "policy", "closed
         if (failure === "target") pr.html_url = draft(8).html_url;
       }
       return { body: pr };
-    }, failure === "viewer" ? "someone-else" : "cgwalters");
+    }, failure === "viewer" ? "someone-else" : "jmarrero");
     const c = promotion();
     r.paint(c);
     const d = await openMember(r);
@@ -303,7 +304,7 @@ test("push after final preflight cannot change the APPROVE payload", async () =>
 
 test("fresh client recovers existing approval without writing and refuses a full review page", async () => {
   for (const count of [1, 100]) {
-    const r = setup((_method, p) => ({ body: p.endsWith("/reviews") ? Array.from({ length: count }, () => ({ user: { login: "cgwalters" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T00:00:00Z" })) : draft(7) }));
+    const r = setup((_method, p) => ({ body: p.endsWith("/reviews") ? Array.from({ length: count }, () => ({ user: { login: "jmarrero" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T00:00:00Z" })) : draft(7) }));
     r.paint(promotion());
     const d = await openMember(r);
     d.querySelector<HTMLButtonElement>("button")!.click(); await settle();
@@ -313,7 +314,7 @@ test("fresh client recovers existing approval without writing and refuses a full
 });
 
 for (const state of ["CHANGES_REQUESTED", "DISMISSED", "COMMENTED", "APPROVED"]) test(`promotion recovery respects the latest deciding review: ${state}`, async () => {
-  const review = (state: string, commit_id = head, login = "cgwalters") => ({ user: { login }, state, commit_id, submitted_at: "2026-11-03T00:00:00Z" });
+  const review = (state: string, commit_id = head, login = "jmarrero") => ({ user: { login }, state, commit_id, submitted_at: "2026-11-03T00:00:00Z" });
   const reviews = [review("APPROVED"), review(state, state === "APPROVED" ? replacement : head), review("COMMENTED"), review("APPROVED", head, "other")];
   const r = setup((method, p) => ({ body: method === "POST" ? {} : p.endsWith("/reviews") ? reviews : draft(7) }));
   r.paint(promotion());
@@ -325,8 +326,8 @@ for (const state of ["CHANGES_REQUESTED", "DISMISSED", "COMMENTED", "APPROVED"])
 
 test("a late-submitted pending change request supersedes an approval created later", async () => {
   const reviews = [
-    { user: { login: "cgwalters" }, state: "CHANGES_REQUESTED", commit_id: head, submitted_at: "2026-11-03T02:00:00Z" },
-    { user: { login: "cgwalters" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T01:00:00Z" },
+    { user: { login: "jmarrero" }, state: "CHANGES_REQUESTED", commit_id: head, submitted_at: "2026-11-03T02:00:00Z" },
+    { user: { login: "jmarrero" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T01:00:00Z" },
   ];
   const r = setup((method, p) => ({ body: method === "POST" ? {} : p.endsWith("/reviews") ? reviews : draft(7) }));
   r.paint(promotion());
@@ -356,7 +357,7 @@ for (const failure of [false, true]) for (const policy of ["foreign", "unreadabl
       assert.equal(r.list.querySelector(".card-body .actions button:not(:disabled)"), null);
       if (policy === "foreign" || policy === "unreadable") {
         assert.equal(r.list.querySelector("a[href]"), null);
-        assert.match(r.list.textContent!, /Prior write on cgwalters-forge\/widget#7/);
+        assert.match(r.list.textContent!, /Prior write on jmarrero-forge\/widget#7/);
       }
       assert.equal(r.writes().length, 1);
     }
@@ -451,7 +452,7 @@ for (const failure of [false, true]) test(`inspection preserves pending ordinary
     if (init?.method === "POST") await pending;
     return r.fetchImpl(url, init);
   });
-  r.paint(cards(rawAsk(7, { kind: "review-approve", action: { type: "approve_pull_request", repository: "cgwalters-forge/widget", number: 7, head } }))[0]!);
+  r.paint(cards(rawAsk(7, { kind: "review-approve", action: { type: "approve_pull_request", repository: "jmarrero-forge/widget", number: 7, head } }))[0]!);
   r.list.querySelector<HTMLButtonElement>(".primary")!.click(); await settle();
   const c = promotion() as Card & { kind: "promote" };
   const restricted = { ...c, ask: { ...c.ask, requestsUnreadable: true } };
@@ -489,7 +490,7 @@ test("main answer posts, then removes exactly needs-human; sent receipt survives
   assert.deepEqual(r.writes().map((c) => `${c.method} ${new URL(c.url).pathname}`), [`POST ${path}/comments`, `DELETE ${path}/labels/needs-human`]);
   assert.match(form.textContent!, /issuecomment-1/);
   assert.ok(r.list.querySelector(".card")!.classList.contains("card-done"));
-  assert.match(r.list.textContent!, /Released: needs-human on cgwalters-forge\/tracker#50, the needs-human hold\. Other holds stay\. Waiting on the agent\./);
+  assert.match(r.list.textContent!, /Released: needs-human on jmarrero-forge\/tracker#50, the needs-human hold\. Other holds stay\. Waiting on the agent\./);
   r.paint({ ...card, priority: "P0" }, true, true);
   await settle();
   assert.equal(r.list.querySelector("form"), form);
@@ -640,12 +641,12 @@ for (const mode of ["read-failed", "ordinary-read-failed", "changed-head", "memb
       if (method === "POST") return n === 8 ? { status: 502 } : { body: {} };
       if (inspecting && mode.endsWith("read-failed")) return { status: 503 };
       if (n === 10) return { status: 503 };
-      if (p.endsWith("/reviews")) return { body: n === 12 ? [{ user: { login: "cgwalters" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T00:00:00Z" }] : [] };
+      if (p.endsWith("/reviews")) return { body: n === 12 ? [{ user: { login: "jmarrero" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T00:00:00Z" }] : [] };
       const pr = draft(n, n === 9 || inspecting && mode === "changed-head" ? replacement : head);
       if (inspecting && mode === "member-refused") pr.draft = false;
       return { body: pr };
     });
-    const listed = asks(...[7, 8, 9, 10, 12].map((n) => rawAsk(n, { key: `cgwalters-forge/widget#${n}/digest`, kind: "digest-approve", action: { type: "approve_pull_request", repository: "cgwalters-forge/widget", number: n, head } })));
+    const listed = asks(...[7, 8, 9, 10, 12].map((n) => rawAsk(n, { key: `jmarrero-forge/widget#${n}/digest`, kind: "digest-approve", action: { type: "approve_pull_request", repository: "jmarrero-forge/widget", number: n, head } })));
     r.paint(publishedCards(listed)[0]!, false, false, listed);
     r.list.querySelector<HTMLButtonElement>(".maintain-sec button")!.click(); await settle();
     const report = r.list.querySelector(".maintain-results")!;
@@ -654,8 +655,8 @@ for (const mode of ["read-failed", "ordinary-read-failed", "changed-head", "memb
     assert.deepEqual(rows.map((row) => row.className), ["approved", "uncertain", "skipped", "failed", "already-approved"]);
     assert.equal(r.writes().length, 2);
     inspecting = true;
-    const group = cards(rawAsk(6, { key: "cgwalters-forge/widget#6", kind: mode === "ordinary-read-failed" ? "review-approve" : "review-promote",
-      action: { type: "pull_request", repository: "cgwalters-forge/widget", number: 6 }, group: { reason: "inspect nonrepresentatives", numbers: [6, 7, 8, 12] },
+    const group = cards(rawAsk(6, { key: "jmarrero-forge/widget#6", kind: mode === "ordinary-read-failed" ? "review-approve" : "review-promote",
+      action: { type: "pull_request", repository: "jmarrero-forge/widget", number: 6 }, group: { reason: "inspect nonrepresentatives", numbers: [6, 7, 8, 12] },
     }))[0]!;
     assert.ok("ask" in group);
     if (mode === "unreadable") group.ask.requestsUnreadable = true;
@@ -686,7 +687,7 @@ test("real digest mixed outcomes retain per-head uncertainty across changed memb
     const n = Number(/\/pulls\/(\d+)/.exec(p)?.[1]);
     if (method === "POST") return n === 8 ? { status: 502 } : { body: {} };
     if (n === 10) return { status: 503 };
-    if (p.endsWith("/reviews")) return { body: n === 12 ? [{ user: { login: "cgwalters" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T00:00:00Z" }] : [] };
+    if (p.endsWith("/reviews")) return { body: n === 12 ? [{ user: { login: "jmarrero" }, state: "APPROVED", commit_id: head, submitted_at: "2026-11-03T00:00:00Z" }] : [] };
     return { body: { state: "open", head: { sha: n === 9 ? replacement : head } } };
   });
   const raw = [7, 8, 9, 10, 11, 12].map((n) => approvalAsk(n, "digest-approve"));
@@ -714,11 +715,11 @@ test("real digest mixed outcomes retain per-head uncertainty across changed memb
 
 for (const promote of [false, true]) test(`${promote ? "Promote" : "ordinary"} grouped members keep independent exact Inspect links when lazy reads fail`, async () => {
   const r = setup(() => ({ status: 502 }));
-  const c = promote ? promotion() : byKey("cgwalters-forge/widget#44");
+  const c = promote ? promotion() : byKey("jmarrero-forge/widget#44");
   r.paint(c);
   for (const i of [0, 1]) {
     const d = await openMember(r, i);
-    assert.equal(d.querySelector("summary a")!.getAttribute("href"), `#pr/cgwalters-forge/widget/${(promote ? 7 : 44) + i}`);
+    assert.equal(d.querySelector("summary a")!.getAttribute("href"), `#pr/jmarrero-forge/widget/${(promote ? 7 : 44) + i}`);
     assert.match(d.textContent!, /502/);
     assert.equal(d.querySelector("button"), null);
   }
@@ -733,7 +734,7 @@ for (const promote of [false, true]) test(`${promote ? "Promote" : "ordinary"} g
 test("main refuses wrong viewer and retains the unsent draft across ordinary redraw", async () => {
   const { r, card, form } = await answer({ login: "someone-else" });
   assert.equal(r.writes().length, 0);
-  assert.match(form.textContent!, /not cgwalters's/);
+  assert.match(form.textContent!, /not jmarrero's/);
   r.paint({ ...card, priority: "P0" });
   assert.equal(r.list.querySelector("form"), form);
   assert.equal(form.querySelector("textarea")!.value, "Go left.");
@@ -779,7 +780,7 @@ test("main refuses a replaced bot-comment ask even when the issue body did not c
   let reads = 0;
   const r = setup((_method, p) => {
     if (p === path) return { body: shown() };
-    if (p === "/graphql") return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [{ body: reads++ ? "Decision needed: A new question" : "Decision needed: Which way?", author: { login: "cgwalters-bot" } }] } } } } } };
+    if (p === "/graphql") return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [{ body: reads++ ? "Decision needed: A new question" : "Decision needed: Which way?", author: { login: "jmarrero-bot" } }] } } } } } };
     return undefined;
   });
   r.paint(answerCard()); await settle();
@@ -794,7 +795,7 @@ test("main checks bot-comment freshness on a question the pass lists", async () 
   let reads = 0;
   const r = setup((_method, p) => {
     if (p === path) return { body: questionIssue() };
-    if (p === "/graphql") return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [{ body: reads++ ? "Decision needed: Changed" : "Decision needed: Which way?", author: { login: "cgwalters-bot" } }] } } } } } };
+    if (p === "/graphql") return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [{ body: reads++ ? "Decision needed: Changed" : "Decision needed: Which way?", author: { login: "jmarrero-bot" } }] } } } } } };
     return undefined;
   });
   r.paint(answerCard()); await settle();
@@ -819,7 +820,7 @@ test("main receipts use the target and read ask across redraws of a changed card
   let ask = "Decision needed: Which way?";
   const r = setup((method, p) => {
     if (p === path) return { body: questionIssue() };
-    if (p === "/graphql") return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [{ body: ask, author: { login: "cgwalters-bot" } }] } } } } } };
+    if (p === "/graphql") return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes: [{ body: ask, author: { login: "jmarrero-bot" } }] } } } } } };
     if (method === "POST") return { status: 502 };
     return undefined;
   });
@@ -840,7 +841,7 @@ test("main receipts use the target and read ask across redraws of a changed card
 });
 
 test("main resolves only an ask-created board question; never closes arbitrary held work or unlabels Blocks targets", async () => {
-  const question = { ...shown(), body: "Blocks: https://github.com/up/proj/issues/7\n\nQ: Which way?", labels: [{ name: "question" }, ...shown().labels], user: { login: "cgwalters-bot" }, assignees: [{ login: "cgwalters" }] };
+  const question = { ...shown(), body: "Blocks: https://github.com/up/proj/issues/7\n\nQ: Which way?", labels: [{ name: "question" }, ...shown().labels], user: { login: "jmarrero-bot" }, assignees: [{ login: "jmarrero" }] };
   const r = setup((method, p) => {
     if (p === path) return { body: question };
     if (p.endsWith("/fields")) return { body: fields() };
@@ -898,7 +899,7 @@ for (const kind of ["needs-operator", "epic-unplanned"]) test(`main never releas
   const { r, form } = await answer({ kind });
   assert.equal(r.writes().length, 1);
   assert.match(form.textContent!, /Only a comment/);
-  assert.match(r.list.textContent!, new RegExp(`Commented only: the ${kind} hold on cgwalters-forge/tracker#50 stays`));
+  assert.match(r.list.textContent!, new RegExp(`Commented only: the ${kind} hold on jmarrero-forge/tracker#50 stays`));
   assert.doesNotMatch(r.list.textContent!, /Released/);
 });
 
@@ -925,7 +926,7 @@ test("main Send checks the viewer before ticking, and preserves its refusal on r
   r.paint(card); await settle();
   r.list.querySelector("button")!.click(); await settle();
   assert.equal(r.writes().length, 0);
-  assert.match(r.list.textContent!, /not cgwalters's/);
+  assert.match(r.list.textContent!, /not jmarrero's/);
   const send = r.list.querySelector(".review-draft");
   r.paint({ ...card, priority: "P0" }, true, true); await settle();
   assert.equal(r.list.querySelector(".review-draft"), send);
@@ -943,11 +944,11 @@ const byKey = (key: string): Card => published().find((c) => c.key === key)!;
 
 test("main draws each published request with only the step the pass and this forge allow", async () => {
   const cases: { key: string; kind: string; button?: string; refused?: RegExp; offered?: string; members?: number; note?: RegExp }[] = [
-    { key: "cgwalters-forge/tracker#1101", kind: "answer", offered: "Not offered here: promote, merge or enqueue, close" },
-    { key: "cgwalters-forge/widget#41", kind: "promote", members: 2, offered: "Not offered here: merge or enqueue, reply, close", note: /2 PRs: drafts waiting for promotion/ },
-    { key: "cgwalters-forge/widget#43", kind: "approve", button: "Approve ccccccc", offered: "Not offered here: promote, merge or enqueue, reply, close" },
+    { key: "jmarrero-forge/tracker#1101", kind: "answer", offered: "Not offered here: promote, merge or enqueue, close" },
+    { key: "jmarrero-forge/widget#41", kind: "promote", members: 2, offered: "Not offered here: merge or enqueue, reply, close", note: /2 PRs: drafts waiting for promotion/ },
+    { key: "jmarrero-forge/widget#43", kind: "approve", button: "Approve ccccccc", offered: "Not offered here: promote, merge or enqueue, reply, close" },
     { key: "up/proj#7", kind: "approve", refused: /Not offered here: Use a forge review bound to target\.head/, offered: "Not offered here: merge or enqueue, approve at the head", note: /marks this request unverified-carried/ },
-    { key: "cgwalters-forge/widget#44", kind: "open", members: 2, offered: "Not offered here: reply", note: /missing-concrete-decision/ },
+    { key: "jmarrero-forge/widget#44", kind: "open", members: 2, offered: "Not offered here: reply", note: /missing-concrete-decision/ },
     { key: "mid/proj#3", kind: "answer", refused: /on https:\/\/forgejo\.example:3000\/git, and this page writes only to github\.com/ },
   ];
   for (const c of cases) {
@@ -970,12 +971,12 @@ test("main draws each published request with only the step the pass and this for
   }
 });
 
-test("main's chat answers only where the card would, and any descriptor ruling a step out rules it out", () => {
+test("main's chat answers only where the card would, and any descriptor ruling a step out rules it out", { skip: !CHAT_CONFIG && "chat is off in this deployment (no session source)" }, () => {
   const state = { gh: new GitHub(async () => "t", async () => { throw new Error("network forbidden"); }) } as Parameters<typeof inboxHooks>[0];
   const hooks = inboxHooks(state);
-  assert.equal(typeof hooks.chatItem!(byKey("cgwalters-forge/tracker#1101"))?.answer, "function");
+  assert.equal(typeof hooks.chatItem!(byKey("jmarrero-forge/tracker#1101"))?.answer, "function");
   assert.equal(hooks.chatItem!(byKey("mid/proj#3"))?.answer, undefined);
-  const approve = byKey("cgwalters-forge/widget#43") as Card & { kind: "approve" };
+  const approve = byKey("jmarrero-forge/widget#43") as Card & { kind: "approve" };
   const [live] = approve.ask.requests!;
   const carried = { ...live!, actions: [{ kind: "review-at-head", supported: false, reason: "carried" }] };
   for (const requests of [[live!, carried], [carried, live!]]) assert.equal(refusal({ ...approve.ask, requests }, "review-at-head"), "carried");
@@ -991,20 +992,20 @@ test("main reads promotion members on demand but respects unsupported descriptor
   };
   const read = new Map<number, number>();
   const r = setup((method, p) => {
-    const m = /^\/repos\/cgwalters-forge\/widget\/(?:pulls|issues)\/(\d+)(\/comments)?$/.exec(p);
+    const m = /^\/repos\/jmarrero-forge\/widget\/(?:pulls|issues)\/(\d+)(\/comments)?$/.exec(p);
     const pr = m && pulls[Number(m[1])];
     if (!pr) return undefined;
-    if (method === "POST" && m![2]) return { status: pr.post ?? 201, body: { html_url: `https://github.com/cgwalters-forge/widget/pull/${m![1]}#issuecomment-9` } };
+    if (method === "POST" && m![2]) return { status: pr.post ?? 201, body: { html_url: `https://github.com/jmarrero-forge/widget/pull/${m![1]}#issuecomment-9` } };
     const n = (read.get(Number(m![1])) ?? 0) + 1;
     read.set(Number(m![1]), n);
-    return { body: { html_url: `https://github.com/cgwalters-forge/widget/pull/${m![1]}`, title: `Draft ${m![1]}`, state: "open", draft: true, body: pr.body, user: { login: "cgwalters-bot" }, head: { sha: n > 1 && pr.moved ? pr.moved : pr.sha } } };
+    return { body: { html_url: `https://github.com/jmarrero-forge/widget/pull/${m![1]}`, title: `Draft ${m![1]}`, state: "open", draft: true, body: pr.body, user: { login: "jmarrero-bot" }, head: { sha: n > 1 && pr.moved ? pr.moved : pr.sha } } };
   });
-  r.paint(byKey("cgwalters-forge/widget#41")); await settle();
+  r.paint(byKey("jmarrero-forge/widget#41")); await settle();
   assert.equal(read.size, 0, "nothing is read until a member is opened");
   const [first, second] = r.list.querySelectorAll<HTMLDetailsElement>("details.member");
   for (const d of [first!, second!]) { d.open = true; d.dispatchEvent(new dom.window.Event("toggle")); }
   await settle();
-  assert.match(first!.textContent!, /Draft 41 · open draft · aaaaaaa · by cgwalters-bot · Review/);
+  assert.match(first!.textContent!, /Draft 41 · open draft · aaaaaaa · by jmarrero-bot · Review/);
   for (const d of [first!, second!]) {
     assert.equal(d.querySelector("button"), null);
     assert.match(d.textContent!, /promotion evaluation and writes are not implemented/);
@@ -1015,7 +1016,7 @@ test("main reads promotion members on demand but respects unsupported descriptor
   report.dataset.keep = "";
   report.dataset.sent = "";
   first!.append(report);
-  r.paint(byKey("cgwalters-forge/widget#41"), true);
+  r.paint(byKey("jmarrero-forge/widget#41"), true);
   const again = r.list.querySelectorAll<HTMLDetailsElement>("details.member")[1]!;
   again.open = true; again.dispatchEvent(new dom.window.Event("toggle")); await settle();
   assert.notEqual(again, second);
@@ -1024,9 +1025,9 @@ test("main reads promotion members on demand but respects unsupported descriptor
 });
 
 test("main explains member-specific promotion problems", async () => {
-  for (const [body, user, why] of [["No meta.", "cgwalters-bot", /names no upstream/], [BOT_META, "someone", /not a cgwalters-bot PR in cgwalters-forge/]] as const) {
-    const r = setup((method, p) => p === "/repos/cgwalters-forge/widget/pulls/41" ? { body: { html_url: "https://github.com/cgwalters-forge/widget/pull/41", title: "T", state: "open", draft: true, body, user: { login: user }, head: { sha: head } } } : undefined);
-    r.paint(byKey("cgwalters-forge/widget#41"));
+  for (const [body, user, why] of [["No meta.", "jmarrero-bot", /names no upstream/], [BOT_META, "someone", /not a jmarrero-bot PR in jmarrero-forge/]] as const) {
+    const r = setup((method, p) => p === "/repos/jmarrero-forge/widget/pulls/41" ? { body: { html_url: "https://github.com/jmarrero-forge/widget/pull/41", title: "T", state: "open", draft: true, body, user: { login: user }, head: { sha: head } } } : undefined);
+    r.paint(byKey("jmarrero-forge/widget#41"));
     const d = r.list.querySelector<HTMLDetailsElement>("details.member")!;
     d.open = true; d.dispatchEvent(new dom.window.Event("toggle")); await settle();
     assert.match(d.textContent!, why);
@@ -1150,11 +1151,11 @@ test("ordinary groups reread members on r after either success or a failed read"
   for (const fail of [false, true]) {
     let reads = 0;
     const r = setup((_method, p) => {
-      if (p !== "/repos/cgwalters-forge/widget/pulls/44") return undefined;
+      if (p !== "/repos/jmarrero-forge/widget/pulls/44") return undefined;
       reads++;
-      return fail && reads === 1 ? { status: 502 } : { body: { html_url: "https://github.com/cgwalters-forge/widget/pull/44", title: "Member", state: "open", body: BOT_META, user: { login: "cgwalters-bot" }, head: { sha: reads === 1 ? head : "b".repeat(40) } } };
+      return fail && reads === 1 ? { status: 502 } : { body: { html_url: "https://github.com/jmarrero-forge/widget/pull/44", title: "Member", state: "open", body: BOT_META, user: { login: "jmarrero-bot" }, head: { sha: reads === 1 ? head : "b".repeat(40) } } };
     });
-    const card = byKey("cgwalters-forge/widget#44");
+    const card = byKey("jmarrero-forge/widget#44");
     r.paint(card);
     const first = r.list.querySelector<HTMLDetailsElement>("details.member")!;
     first.open = true; first.dispatchEvent(new dom.window.Event("toggle")); await settle();
@@ -1205,7 +1206,7 @@ test("shared #680 projection round trips exact members as labelled rows in the p
   r.paint(c);
   assert.equal(r.calls.length, 0, "initial load does no discovery");
   const order = () => [...r.list.querySelectorAll<HTMLDetailsElement>(".member")].map((d) => d.dataset.member);
-  const published = ["cgwalters-forge/bootc#1", "cgwalters-forge/bootc#2", "cgwalters-forge/bootc#3"];
+  const published = ["jmarrero-forge/bootc#1", "jmarrero-forge/bootc#2", "jmarrero-forge/bootc#3"];
   // #242 drew nav buttons and bucket headings before any read, and moved rows under them.
   assert.equal(r.list.querySelector(".members nav, .members h4, [data-review-group]"), null);
   for (const [n, bucket] of [[1, "quick"], [2, "deep"], [3, "unknown/deep"]] as const) {
@@ -1222,15 +1223,15 @@ test("shared #680 projection round trips exact members as labelled rows in the p
   const second = r.list.querySelectorAll<HTMLDetailsElement>(".member")[1]!;
   second.open = true; await settle();
   const changed = structuredClone(bucketFixture.review_buckets);
-  changed["cgwalters-forge/bootc#2"]!.bucket = "quick";
+  changed["jmarrero-forge/bootc#2"]!.bucket = "quick";
   const reads = r.calls.length;
   r.paint(bucketCard({ review_buckets: changed })); await settle();
-  assert.equal(r.list.querySelector<HTMLDetailsElement>(".member[open]")!.dataset.member, "cgwalters-forge/bootc#2", "refresh keeps typed identity, not group index");
+  assert.equal(r.list.querySelector<HTMLDetailsElement>(".member[open]")!.dataset.member, "jmarrero-forge/bootc#2", "refresh keeps typed identity, not group index");
   assert.equal(r.calls.length, reads, "a changed poll restores selection without reading targets");
   assert.match(r.list.querySelector(".member[open]")!.textContent!, /evidence changed/);
   r.paint(bucketCard({ review_buckets: changed }), true); await settle();
   const refreshed = r.list.querySelector<HTMLDetailsElement>(".member[open]")!;
-  assert.equal(refreshed?.dataset.member, "cgwalters-forge/bootc#2", "explicit reload reinspects the selected identity");
+  assert.equal(refreshed?.dataset.member, "jmarrero-forge/bootc#2", "explicit reload reinspects the selected identity");
   assert.match(refreshed.textContent!, /deep · CI success/);
   assert.ok(r.calls.length > reads, "explicit reload reads the selected target");
   assert.deepEqual(order(), published);
@@ -1241,7 +1242,7 @@ for (const source of ["drafts", "decisions"]) test(`changed lazy ${source} group
   const r = setup(() => ({ body: bootcDraft(1) }));
   r.paint(bucketCard({}, { source }));
   const first = await openMember(r);
-  assert.equal(first.dataset.member, "cgwalters-forge/bootc#1");
+  assert.equal(first.dataset.member, "jmarrero-forge/bootc#1");
   const calls = r.calls.length;
   const changed = bucketCard({}, { source, group: { ...bucketFixture.group, reason: "new grouping" } });
   r.state.published = { asks: "ask" in changed ? [changed.ask] : [], unavailable: false };
@@ -1249,7 +1250,7 @@ for (const source of ["drafts", "decisions"]) test(`changed lazy ${source} group
   await settle();
   assert.ok(r.list.querySelector<HTMLDetailsElement>(".card-full")!.open);
   const selected = r.list.querySelector<HTMLDetailsElement>(".member[open]")!;
-  assert.equal(selected.dataset.member, "cgwalters-forge/bootc#1");
+  assert.equal(selected.dataset.member, "jmarrero-forge/bootc#1");
   assert.match(selected.textContent!, /evidence changed/);
   assert.equal(r.calls.length, calls);
   selected.open = false; await settle(); selected.open = true; await settle();
@@ -1257,11 +1258,11 @@ for (const source of ["drafts", "decisions"]) test(`changed lazy ${source} group
 });
 
 for (const [name, extension, askOver] of [
-  ["legacy", undefined, {}], ["malformed", { "cgwalters-forge/bootc#1": { ...bucketFixture.review_buckets["cgwalters-forge/bootc#1"], assessed_head: "short" } }, {}],
+  ["legacy", undefined, {}], ["malformed", { "jmarrero-forge/bootc#1": { ...bucketFixture.review_buckets["jmarrero-forge/bootc#1"], assessed_head: "short" } }, {}],
   ["unknown extension version", { schema: "v3", members: bucketFixture.review_buckets }, {}],
-  ["unknown record version", { "cgwalters-forge/bootc#1": { ...bucketFixture.review_buckets["cgwalters-forge/bootc#1"], version: 3 } }, {}],
+  ["unknown record version", { "jmarrero-forge/bootc#1": { ...bucketFixture.review_buckets["jmarrero-forge/bootc#1"], version: 3 } }, {}],
   ["carried", bucketFixture.review_buckets, { carried: true }],
-  ["stale", { "cgwalters-forge/bootc#1": { ...bucketFixture.review_buckets["cgwalters-forge/bootc#1"], assessed_head: replacement } }, {}],
+  ["stale", { "jmarrero-forge/bootc#1": { ...bucketFixture.review_buckets["jmarrero-forge/bootc#1"], assessed_head: replacement } }, {}],
 ] as const) test(`${name} assessment cannot classify a member quick`, async () => {
   const r = setup((_, p) => ({ body: p.endsWith("/check-runs") ? { total_count: 1, check_runs: [{ name: "test", status: "completed", conclusion: "success" }] } : p.endsWith("/status") ? { total_count: 0, statuses: [] } : bootcDraft(1) }));
   r.paint(bucketCard({ review_buckets: extension }, askOver));
@@ -1277,11 +1278,11 @@ test("extension bounds, unread sources, evicted detail and unknown schema never 
   const c = bucketCard(); assert.ok("ask" in c);
   for (const over of [
     { sources: { reviews: "unread" } },
-    { review_buckets: Object.fromEntries(Array.from({ length: 10_001 }, (_, i) => [`cgwalters-forge/bootc#${i + 1}`, bucketFixture.review_buckets["cgwalters-forge/bootc#1"]])) },
-    { review_buckets: { "cgwalters-forge/bootc#1": { ...bucketFixture.review_buckets["cgwalters-forge/bootc#1"], summary: "x".repeat(501) } } },
+    { review_buckets: Object.fromEntries(Array.from({ length: 10_001 }, (_, i) => [`jmarrero-forge/bootc#${i + 1}`, bucketFixture.review_buckets["jmarrero-forge/bootc#1"]])) },
+    { review_buckets: { "jmarrero-forge/bootc#1": { ...bucketFixture.review_buckets["jmarrero-forge/bootc#1"], summary: "x".repeat(501) } } },
   ]) {
     const malformed = bucketCard(over); assert.ok("ask" in malformed);
-    assert.equal(malformed.ask.reviewBuckets?.["cgwalters-forge/bootc#1"], undefined);
+    assert.equal(malformed.ask.reviewBuckets?.["jmarrero-forge/bootc#1"], undefined);
   }
   const raw = rawNeedsYou([], "2026-11-05T00:00:00Z", { review_buckets: bucketFixture.review_buckets, identities: [{ key: c.ask.key, detail_key: c.ask.key, item: c.ask.item, source: "reviews", kind: "review-promote", priority: null, waiting_since: c.ask.waitingSince, carried: false }], count: 1 });
   const list = parseNeedsYou(raw); assert.ok(typeof list === "object");
@@ -1313,7 +1314,7 @@ test("mixed evidence retains per-member sent and uncertain receipts across bucke
   const r = setup((method, p) => {
     if (p.endsWith("/check-runs")) return { body: { total_count: 1, check_runs: [{ name: "test", status: "completed", conclusion: "success" }] } };
     if (p.endsWith("/status")) return { body: { total_count: 0, statuses: [] } };
-    if (p.endsWith("/reviews")) return method === "GET" ? { body: [] } : { status: p.includes("/2/") ? 502 : 200, body: { html_url: "https://github.com/cgwalters-forge/bootc/pull/1#pullrequestreview-1" } };
+    if (p.endsWith("/reviews")) return method === "GET" ? { body: [] } : { status: p.includes("/2/") ? 502 : 200, body: { html_url: "https://github.com/jmarrero-forge/bootc/pull/1#pullrequestreview-1" } };
     return { body: bootcDraft(Number(p.split("/").at(-1))) };
   });
   r.paint(bucketCard());
@@ -1321,7 +1322,7 @@ test("mixed evidence retains per-member sent and uncertain receipts across bucke
     const row = [...r.list.querySelectorAll<HTMLDetailsElement>(".member")].find((d) => d.dataset.member?.endsWith(`#${number}`))!;
     row.open = true; await settle(); row.querySelector<HTMLButtonElement>("button")!.click(); await settle();
   }
-  const moved = bucketCard({ review_buckets: {} }, { key: "cgwalters-forge/bootc#2", action: { type: "pull_request", repository: "cgwalters-forge/bootc", number: 2 }, group: { reason: "regrouped", numbers: [2, 3, 1] } });
+  const moved = bucketCard({ review_buckets: {} }, { key: "jmarrero-forge/bootc#2", action: { type: "pull_request", repository: "jmarrero-forge/bootc", number: 2 }, group: { reason: "regrouped", numbers: [2, 3, 1] } });
   r.paint(moved); await settle();
   assert.match(r.list.querySelector(".member[open]")!.textContent!, /uncertain/);
   for (const row of r.list.querySelectorAll<HTMLDetailsElement>(".card:not(.card-stale) .member")) {
@@ -1341,7 +1342,7 @@ test("CI change without push refuses the displayed member; refresh requires anot
   const r = setup((method, p) => {
     if (p.endsWith("/check-runs")) return { body: { total_count: 1, check_runs: [{ name: "test", status: "completed", conclusion: green ? "success" : "failure" }] } };
     if (p.endsWith("/status")) return { body: { total_count: 0, statuses: [] } };
-    if (p.endsWith("/reviews")) return { body: method === "GET" ? [] : { html_url: "https://github.com/cgwalters-forge/bootc/pull/1#pullrequestreview-1" } };
+    if (p.endsWith("/reviews")) return { body: method === "GET" ? [] : { html_url: "https://github.com/jmarrero-forge/bootc/pull/1#pullrequestreview-1" } };
     return { body: bootcDraft(1) };
   });
   try {

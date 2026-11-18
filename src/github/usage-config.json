@@ -1,4 +1,4 @@
 {
-  "mistralAllowance": { "repo": "cgwalters-forge/tracker", "path": ".github/agentic-job/pools.json" },
-  "cost": { "repo": "cgwalters-forge/tracker", "ref": "data" }
+  "mistralAllowance": { "repo": "jmarrero-forge/tracker", "path": ".github/agentic-job/pools.json" },
+  "cost": { "repo": "jmarrero-forge/tracker", "ref": "data" }
 }

@@ -1,7 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
+import { readFileSync } from "node:fs";
+
+// Chat is off in jmarrero's deployment: no session source yet.
+const chatOff = !JSON.parse(readFileSync("src/github/chat-config.json", "utf8")).sources.length;
 
 test("repository Chat confirms a dispatch and shows its returned starting run", async ({ page }) => {
+  test.skip(chatOff, "chat is off in this deployment (no session source)");
   await page.route("**/api/acp", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/v1/state", (route) => route.fulfill({ json: { schema: "review-service/v1" } }));
   const problems: string[] = [];

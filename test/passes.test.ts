@@ -14,7 +14,7 @@ installDom();
 type Raw = Record<string, any>;
 const raw = (): Raw => fixture<Raw>("passes.json");
 const body = (json: unknown) => `${PASSES_MARKER}\n\n\`\`\`json\n${JSON.stringify(json)}\n\`\`\``;
-const comment = (json: unknown, login = "cgwalters-bot"): RawComment => ({ user: { login }, body: body(json) });
+const comment = (json: unknown, login = "jmarrero-bot"): RawComment => ({ user: { login }, body: body(json) });
 const parsed = (json: unknown = raw()): Passes => {
   const p = parsePasses(body(json));
   assert.equal(typeof p, "object", String(p));
@@ -91,7 +91,7 @@ describe("bounded publication read", () => {
     const newer = { ...raw(), published_at: "2026-11-05T11:59:00Z" };
     assert.equal((findPasses([comment(raw()), comment(newer), comment(raw(), "someone")]) as Passes).publishedAt, newer.published_at);
     assert.equal(findPasses([comment(raw(), "someone")]), undefined);
-    const holds = { user: { login: "cgwalters-bot" }, body: `${HOLDS_MARKER}\n\n\`\`\`json\n${JSON.stringify({ schema: "agent-board/holds/v1", at: "2026-11-05T11:00:00Z", holds: [] })}\n\`\`\`` };
+    const holds = { user: { login: "jmarrero-bot" }, body: `${HOLDS_MARKER}\n\n\`\`\`json\n${JSON.stringify({ schema: "agent-board/holds/v1", at: "2026-11-05T11:00:00Z", holds: [] })}\n\`\`\`` };
     const { fetchImpl, calls } = scriptedFetch((_m, url) => url.endsWith(usagePath) ? { body: [holds, comment(raw())] } : undefined);
     const read = await loadPassPublications(new GitHub(async () => "t", fetchImpl));
     assert.equal(read.holds?.at, "2026-11-05T11:00:00Z");
@@ -226,7 +226,7 @@ describe("history replay DOM", () => {
     const t = text(el);
     for (const s of ["Published 1m ago", "no ready work (14 candidates read)", "waiting out the re-plan delay until", "(in 2h 30m)", "held (needs-human)", "Started 2, 1 uncertain", "uncertain: check the runs", "capped by wip", "pull-requests: API rate limit exceeded for installation", "schedule: cut short", "did not read everything: unknown", "setup: HTTP 503 from the board", "published no reason: unknown", "Would start at least 1", "Left out to fit: 2 starts.", "run not known", "12.5% used of 55% allowed", "(in 21h)", "well under pace with nothing ready", "Work in flight read 2m ago", "in the merge queue", "waiting for review"]) assert.ok(t.includes(s), s);
     const hrefs = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));
-    for (const suffix of ["tracker/actions/runs/42070000004/attempts/2", "review/issues/245", "tracker/actions/runs/42064057295", "agent-board/pull/680", "review/pull/244"]) assert.ok(hrefs.includes(`https://github.com/cgwalters-forge/${suffix}`));
+    for (const suffix of ["tracker/actions/runs/42070000004/attempts/2", "review/issues/245", "tracker/actions/runs/42064057295", "agent-board/pull/680", "review/pull/244"]) assert.ok(hrefs.includes(`https://github.com/jmarrero-forge/${suffix}`));
     assert.equal(el.querySelector("button, input, textarea, form, script, img"), null);
   });
 

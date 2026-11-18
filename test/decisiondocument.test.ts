@@ -7,10 +7,9 @@ import recorded from "./fixtures/decision-about.json" with { type: "json" };
 const body = "### D12 Enable scheduler? (P0, blocks example/work#3)\nContext.\n- [ ] A) Yes ← recommended: ready\n- [ ] B) Wait\n\nReply:\n\n### D13 Another?\n- [ ] A) Yes\n- [ ] B) No\nReply:\n\n## Done\n### D1 Old\nOutcome: kept\n";
 const path = "/repos/example/private/issues/8";
 
-test("site configuration enables a valid document and retains legacy questions", () => {
-  assert.ok(DECISIONS_CONFIG.document);
-  assert.match(DECISIONS_CONFIG.document.repo, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
-  assert.equal(DECISIONS_CONFIG.document.number, 1);
+test("site configuration has no document and retains legacy questions", () => {
+  // jmarrero-forge has no operator decisions document yet.
+  assert.equal(DECISIONS_CONFIG.document, null);
   assert.equal(DECISIONS_CONFIG.legacyQuestions, true);
 });
 
@@ -131,8 +130,6 @@ test("resolve is off unless configured, and a bounded number of items is read", 
   const requests: string[] = [];
   assert.equal((await readDocument(recordedGitHub(about, requests), { repo: "example/private", number: 8 })).marks.size, 0);
   assert.equal(requests.length, 1);
-  // The site's document sets it.
-  assert.equal(DECISIONS_CONFIG.document?.resolve, true);
   assert.equal((await readDocument(recordedGitHub(about), { repo: "example/private", number: 8, resolve: true })).marks.size, 3);
 
   const many = Array.from({ length: MAX_ABOUT + 5 }, (_, i) => `### D${i + 1} X\nAbout: example/work#${i + 1}\n`).join("");

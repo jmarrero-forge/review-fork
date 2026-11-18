@@ -18,15 +18,15 @@ for (const queue of ["loads", "fails", "delayed", "delayed failure"]) it(`opens 
   const { window } = dom;
   window.scrollTo = () => {};
   const content = {
-    __typename: "Issue", id: "I_example786", title: "An in-progress epic", body: "Epic context", url: "https://github.com/cgwalters-forge/tracker/issues/786", state: "OPEN",
+    __typename: "Issue", id: "I_example786", title: "An in-progress epic", body: "Epic context", url: "https://github.com/jmarrero-forge/tracker/issues/786", state: "OPEN",
     ...(queue.startsWith("delayed") ? {
-      body: "Blocks: https://github.com/cgwalters-forge/tracker/issues/1\n\nQ: Epic context?",
-      labels: { nodes: [{ name: "question" }] }, assignees: { nodes: [{ login: "cgwalters" }] },
-      author: { login: "cgwalters-bot" },
+      body: "Blocks: https://github.com/jmarrero-forge/tracker/issues/1\n\nQ: Epic context?",
+      labels: { nodes: [{ name: "question" }] }, assignees: { nodes: [{ login: "jmarrero" }] },
+      author: { login: "jmarrero-bot" },
     } : {}),
   };
   const status = "In Progress";
-  const board = { id, project: { number: 1, owner: { login: "cgwalters-forge" } }, fieldValues: { nodes: [{ name: status, field: { name: "Status" } }] } };
+  const board = { id, project: { number: 1, owner: { login: "jmarrero-forge" } }, fieldValues: { nodes: [{ name: status, field: { name: "Status" } }] } };
   let reads = 0;
   let queueFailures = 0;
   let publicationFinished = false;
@@ -38,7 +38,7 @@ for (const queue of ["loads", "fails", "delayed", "delayed failure"]) it(`opens 
     ResizeObserver: class { observe() {} disconnect() {} },
     fetch: async (input: string, init?: RequestInit) => {
       const url = new URL(input);
-      const publication = url.pathname === "/repos/cgwalters-forge/bot-ops/issues/1/comments";
+      const publication = url.pathname === "/repos/jmarrero-forge/bot-ops/issues/1/comments";
       if (publication && queue.startsWith("delayed")) await queueReady;
       if (publication) publicationFinished = true;
       if ((queue === "fails" || queue === "delayed failure") && publication) {
@@ -99,7 +99,7 @@ for (const queue of ["loads", "fails", "delayed", "delayed failure"]) it(`opens 
       assert.equal(answer.value, "Keep this unsent answer");
     }
 
-    window.location.hash = "#issue/cgwalters-forge/tracker/786";
+    window.location.hash = "#issue/jmarrero-forge/tracker/786";
     await until(() => reads === 2 && text().includes("In Progress"));
     missing = true;
     window.location.hash = "#item/PVTI_missing";
@@ -110,7 +110,7 @@ for (const queue of ["loads", "fails", "delayed", "delayed failure"]) it(`opens 
     key("r");
     await until(() => reads === 4 && text().includes("Couldn't read this item"));
 
-    window.location.hash = "#issue/cgwalters-forge/tracker/786";
+    window.location.hash = "#issue/jmarrero-forge/tracker/786";
     await until(() => reads === 5 && text().includes(content.title));
     assert.doesNotMatch(text(), /In Progress/, "off-board issue renders alone");
   } finally {

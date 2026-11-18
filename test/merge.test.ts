@@ -13,7 +13,7 @@ const ready = () => ({
   viewerCanUpdate: true, mergeStateStatus: "CLEAN", isMergeQueueEnabled: false, mergeQueueEntry: null,
 });
 
-function client(over = {}, login = "cgwalters", mutation: "ok" | "error" | "network" | "http" = "ok", repository = {}, mergeResponse: unknown = { merged: mutation !== "error", message: "refused" }, queueEntry: unknown = { id: "MQ_1" }) {
+function client(over = {}, login = "jmarrero", mutation: "ok" | "error" | "network" | "http" = "ok", repository = {}, mergeResponse: unknown = { merged: mutation !== "error", message: "refused" }, queueEntry: unknown = { id: "MQ_1" }) {
   const f = scriptedFetch((method, url) => {
     const body = f.calls.at(-1)!.body;
     if (url.endsWith("/user")) return { body: { login } };
@@ -49,7 +49,7 @@ describe("head-bound Merge / enqueue", () => {
 
   for (const response of [{}, [], "merged", { merged: "false" }, { merged: "true" }, { merged: 0 }, { merged: 1 }, { merged: null }]) {
     it(`keeps an unconfirmed merge uncertain for ${JSON.stringify(response)}`, async () => {
-      const { gh, calls } = client({}, "cgwalters", "ok", {}, response);
+      const { gh, calls } = client({}, "jmarrero", "ok", {}, response);
       await assert.rejects(mergeOrEnqueue(gh, ref, HEAD, () => {}), MaybeSentError);
       assert.equal(calls.length, 3);
       assert.equal(calls.filter((c) => c.method === "PUT").length, 1);
@@ -92,7 +92,7 @@ describe("head-bound Merge / enqueue", () => {
     });
 
     it(`keeps malformed queue admission ${JSON.stringify(entry)} uncertain without retrying`, async () => {
-      const { gh, calls } = client({ isMergeQueueEnabled: true }, "cgwalters", "ok", {}, undefined, entry);
+      const { gh, calls } = client({ isMergeQueueEnabled: true }, "jmarrero", "ok", {}, undefined, entry);
       await assert.rejects(mergeOrEnqueue(gh, ref, HEAD, () => {}), MaybeSentError);
       assert.equal(calls.length, 3);
       assert.equal(calls.some((c) => c.method === "PUT"), false);
@@ -106,14 +106,14 @@ describe("head-bound Merge / enqueue", () => {
   });
 
   it("keeps a null queue admission uncertain", async () => {
-    const { gh, calls } = client({ isMergeQueueEnabled: true }, "cgwalters", "ok", {}, undefined, null);
+    const { gh, calls } = client({ isMergeQueueEnabled: true }, "jmarrero", "ok", {}, undefined, null);
     await assert.rejects(mergeOrEnqueue(gh, ref, HEAD, () => {}), MaybeSentError);
     assert.equal(calls.length, 3);
   });
 
   for (const queue of [false, true]) for (const failure of ["error", "network", "http"] as const) {
     it(`never retries a ${failure} ${queue ? "enqueue" : "merge"}`, async () => {
-      const { gh, calls } = client({ isMergeQueueEnabled: queue }, "cgwalters", failure);
+      const { gh, calls } = client({ isMergeQueueEnabled: queue }, "jmarrero", failure);
       await assert.rejects(mergeOrEnqueue(gh, ref, HEAD, () => {}), (e: Error) => {
         assert.equal(e.name === "MaybeSentError", failure === "network" || queue && failure === "error");
         return true;

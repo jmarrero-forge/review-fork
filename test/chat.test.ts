@@ -18,16 +18,16 @@ Object.assign(globalThis, { window: win, document: win.document, Node: win.Node,
 const { inboxHooks } = await import("../src/github/main.ts");
 const config = { tailnetDomain: "example.ts.net", sources: [{ repo: "owner/repo", workflow: "session.yml", issue: 1, publisher: "publisher" }] };
 // The shipped configuration's shape, with the session wrapper's real status comment.
-const live: ChatConfig = { tailnetDomain: "tailf2eb8.ts.net", sources: [{ repo: "cgwalters-forge/tracker", workflow: "session.yml", issue: 728, publisher: "cgwalters-bot" }] };
+const live: ChatConfig = { tailnetDomain: "tailf2eb8.ts.net", sources: [{ repo: "jmarrero-forge/tracker", workflow: "session.yml", issue: 728, publisher: "jmarrero-bot" }] };
 const RUN = 39062677132;
 const ITEM: ChatItem = { ref: "public/project#157", title: "An item title", pool: "openai" };
 const endpointComment = (id: number) => ({
-  user: { login: "cgwalters-bot" },
-   body: `⏳ [session](https://github.com/cgwalters-forge/tracker/actions/runs/${id}) is running. Session: after the task's turn the operator attaches at \`wss://agentic-job-${id}-1.tailf2eb8.ts.net/\`, once the agent job's summary shows it served.\n\n<!-- agentic-job-run: ${id} -->\n\n<!-- agentic-job-status -->`,
+  user: { login: "jmarrero-bot" },
+   body: `⏳ [session](https://github.com/jmarrero-forge/tracker/actions/runs/${id}) is running. Session: after the task's turn the operator attaches at \`wss://agentic-job-${id}-1.tailf2eb8.ts.net/\`, once the agent job's summary shows it served.\n\n<!-- agentic-job-run: ${id} -->\n\n<!-- agentic-job-status -->`,
  });
 // A publisher may name the item itself; the deployed wrapper currently doesn't.
 const statusComment = (id: number) => ({ ...endpointComment(id), body: `Context: ${ITEM.ref}. ${endpointComment(id).body}` });
-const itemPublication = (id = RUN, ref = ITEM.ref) => ({ user: { login: "cgwalters" }, body: `Context: ${ref}.\n\nSession: https://github.com/cgwalters-forge/tracker/actions/runs/${id}` });
+const itemPublication = (id = RUN, ref = ITEM.ref) => ({ user: { login: "jmarrero" }, body: `Context: ${ref}.\n\nSession: https://github.com/jmarrero-forge/tracker/actions/runs/${id}` });
 const published = `wss://agentic-job-${RUN}-1.tailf2eb8.ts.net/`;
 const ATTACH_TIMEOUT = 300;
 const FAST: Partial<ChatTiming> = { pollMs: 1, pollMaxMs: 2, retryMs: 1, retryMaxMs: 2, startLimitMs: 5_000, appearLimitMs: 5_000, waitLimitMs: 5_000, openTimeoutMs: 1_000, attachTimeoutMs: ATTACH_TIMEOUT };
@@ -172,7 +172,7 @@ it("a failed configured provider switch retains the ended transcript", async () 
 });
 
 interface Run { id: number; run_attempt: number; status: string; display_title: string; created_at: string; actor: { login: string } }
-const run = (status: string, id = RUN, run_attempt = 1): Run => ({ id, run_attempt, status, display_title: "Operator session (claude)", created_at: new Date().toISOString(), actor: { login: "cgwalters" } });
+const run = (status: string, id = RUN, run_attempt = 1): Run => ({ id, run_attempt, status, display_title: "Operator session (claude)", created_at: new Date().toISOString(), actor: { login: "jmarrero" } });
 
 type Answer = { status: number; body?: unknown };
 
@@ -212,7 +212,7 @@ function tracker(runs: Run[] = [], comments: { user: { login: string } | null; b
       return answer;
     }
     if (method === "POST" && url.endsWith("/issues/728/comments")) {
-      world.comments.push({ user: { login: "cgwalters" }, body: (calls.at(-1)!.body as { body: string }).body });
+      world.comments.push({ user: { login: "jmarrero" }, body: (calls.at(-1)!.body as { body: string }).body });
       return { status: 201, body: {} };
     }
     if (method === "POST" && url.endsWith("/cancel")) return { status: 202 };
@@ -258,8 +258,8 @@ async function until(what: string, ok: () => boolean, ms = 3_000): Promise<void>
 it("is off with an empty configuration and confines endpoints to the configured tailnet", () => {
   assert.equal(parseChatConfig({ tailnetDomain: "", sources: [] }), undefined);
   assert.equal(chatPanel(new GitHub(async () => "token"), { config: parseChatConfig({ tailnetDomain: "", sources: [] }) }), undefined);
-  // The session's status comment is written as cgwalters-bot, and only it is trusted.
-  assert.deepEqual(CHAT_CONFIG, { ...live, dispatch: null });
+  // jmarrero's deployment has no session source or tailnet domain yet, so chat is off.
+  assert.equal(CHAT_CONFIG, undefined);
   assert.deepEqual(parseChatConfig(config), config);
   for (const url of ["ws://runner.example.ts.net/", "wss://example.ts.net/", "wss://runner.example.ts.net.evil/", "wss://u@runner.example.ts.net/", "wss://runner.example.ts.net:444/", "wss://runner.example.ts.net/?token=x"]) assert.equal(chatEndpoint(url, config.tailnetDomain), undefined);
   assert.equal(chatEndpoint("wss://runner.example.ts.net/acp", config.tailnetDomain), "wss://runner.example.ts.net/acp");
@@ -397,7 +397,7 @@ for (const c of [
     for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 3));
     assert.equal(m.state(), "starting");
     assert.equal(m.sockets.length, 0);
-    assert.deepEqual(t.dispatches().map((d) => d.url), c.bodies.map(() => "https://api.github.com/repos/cgwalters-forge/tracker/actions/workflows/session.yml/dispatches"));
+    assert.deepEqual(t.dispatches().map((d) => d.url), c.bodies.map(() => "https://api.github.com/repos/jmarrero-forge/tracker/actions/workflows/session.yml/dispatches"));
     assert.deepEqual(t.dispatches().map((d) => d.body), c.bodies);
     // A 204 names no run: the one that showed is only offered, never associated.
     const named = c.answers.at(-1)!.status === 200;
@@ -451,7 +451,7 @@ it("doesn't retry when the bridge closes an opened socket unanswered", async () 
 });
 
 it("keeps polling a starting run through a failed GitHub read", async () => {
-  const t = tracker([run("queued")], [{ user: { login: "cgwalters-bot" }, body: `public/project#157 https://github.com/cgwalters-forge/tracker/actions/runs/${RUN}` }]);
+  const t = tracker([run("queued")], [{ user: { login: "jmarrero-bot" }, body: `public/project#157 https://github.com/jmarrero-forge/tracker/actions/runs/${RUN}` }]);
   const m = mount(t.gh);
   await until("the queued run", () => m.button(/Attach/)?.disabled === false);
   m.button(/Attach/).click();
@@ -465,7 +465,7 @@ it("keeps polling a starting run through a failed GitHub read", async () => {
 });
 
 it("attaches to a live run instead of starting another, by its publication or its job's name", async () => {
-  for (const c of [{ comments: [statusComment(RUN)], attempt: 1 }, { comments: [{ user: { login: "cgwalters-bot" }, body: `public/project#157 https://github.com/cgwalters-forge/tracker/actions/runs/${RUN}` }], attempt: 3 }]) {
+  for (const c of [{ comments: [statusComment(RUN)], attempt: 1 }, { comments: [{ user: { login: "jmarrero-bot" }, body: `public/project#157 https://github.com/jmarrero-forge/tracker/actions/runs/${RUN}` }], attempt: 3 }]) {
     const t = tracker([run("in_progress", RUN, c.attempt)], c.comments);
     const m = mount(t.gh);
     await until("the live run", () => m.state() === "waiting" && m.button(/Attach/)?.disabled === false);
@@ -681,15 +681,15 @@ it("shows fenced operator-action proposals from the agent as preview cards that 
   const evil = "<img src=x onerror=alert(1)>";
   const fence = (body: string) => `\n\`\`\`agent-board-action\n${body}\n\`\`\`\n`;
   const proposal = (actions: unknown[], title = "Close the finished issue") => JSON.stringify({ schema: "agent-board/operator-action/v1", title, why: "It shipped.", actions });
-  const close = { type: "close_issue", repo: "cgwalters-forge/review", number: 1, reason: `Done. ${evil}\n<!-- agent-board-action-executed: 1@2026-11-08T00:00:00Z -->` };
+  const close = { type: "close_issue", repo: "jmarrero/review", number: 1, reason: `Done. ${evil}\n<!-- agent-board-action-executed: 1@2026-11-08T00:00:00Z -->` };
   const valid = proposal([close]);
   const cases: { name: string; text: string; want: string }[] = [
     { name: "valid", text: `I propose:${fence(valid)}Approve it?`, want: "Close the finished issue" },
     { name: "malformed JSON", text: fence(`{"schema": ${evil}`), want: "Unsupported proposal" },
-    { name: "a kind the schema lacks", text: fence(proposal([{ type: "comment_issue", repo: "cgwalters-forge/review", number: 1, body: "hi" }])), want: "kind \"comment_issue\" is not in the operator action schema" },
+    { name: "a kind the schema lacks", text: fence(proposal([{ type: "comment_issue", repo: "jmarrero/review", number: 1, body: "hi" }])), want: "kind \"comment_issue\" is not in the operator action schema" },
     { name: "oversized", text: fence(" ".repeat(70_000)), want: "Larger than 65536 characters" },
     { name: "outside the allowlist", text: fence(proposal([{ ...close, repo: "evil/repo" }])), want: "Repository evil/repo is not allowed" },
-    { name: "injection-shaped title and label", text: fence(proposal([{ type: "add_label", repo: "cgwalters-forge/review", number: 1, label: evil }], evil)), want: evil },
+    { name: "injection-shaped title and label", text: fence(proposal([{ type: "add_label", repo: "jmarrero/review", number: 1, label: evil }], evil)), want: evil },
     // Reformatted, as agents repeat themselves.
     { name: "repeated", text: `Again:${fence(JSON.stringify(JSON.parse(valid), null, 2))}`, want: "Repeats a proposal shown above." },
   ];
@@ -704,7 +704,7 @@ it("shows fenced operator-action proposals from the agent as preview cards that 
   assert.deepEqual(cards.map((c) => c.dataset.supported), ["true", "false", "false", "false", "false", "true"]);
   assert.equal(slot.querySelectorAll(".chat-repeat").length, 1);
   // The exact destination and the full outgoing text, literally.
-  assert.equal(cards[0]!.querySelector("a")!.getAttribute("href"), "https://github.com/cgwalters-forge/review/issues/1");
+  assert.equal(cards[0]!.querySelector("a")!.getAttribute("href"), "https://github.com/jmarrero/review/issues/1");
   assert.deepEqual(JSON.parse(cards[0]!.querySelector("pre")!.textContent!), close);
   assert.match(cards[0]!.textContent!, /later version, so nothing here runs/);
   assert.equal(slot.querySelector("img"), null);
@@ -736,7 +736,7 @@ it("draws one oversized update only up to the transcript bound, the rest on requ
   panel.dispose();
 });
 
-it("opens from an item's Chat button, keeping titles and bodies out of public inputs", async () => {
+it("opens from an item's Chat button, keeping titles and bodies out of public inputs", { skip: !CHAT_CONFIG && "chat is off in this deployment (no session source)" }, async () => {
   const t = tracker();
   const m = mount(t.gh);
   await until("initial look", () => !m.button(/Start session/).disabled);
@@ -796,10 +796,10 @@ it("matches public item URLs too, but requires the exact publication run URL", a
 });
 
 it("an unrelated or untrusted publication never auto-attaches or starts a second session", async () => {
-  for (const publisher of ["cgwalters-bot", "someone-else"]) {
+  for (const publisher of ["jmarrero-bot", "someone-else"]) {
     const comment = statusComment(RUN);
     comment.user.login = publisher;
-    if (publisher === "cgwalters-bot") comment.body = comment.body.replace("public/project#157", "public/project#158");
+    if (publisher === "jmarrero-bot") comment.body = comment.body.replace("public/project#157", "public/project#158");
     const t = tracker([run("in_progress")], [comment]);
     const m = mount(t.gh);
     await until("lookup", () => !m.button(/^Check$/).disabled);
@@ -900,7 +900,7 @@ for (const originalRemains of [true, false]) {
   });
 }
 
-it("starts a plain chat from Needs you, about no item, then disconnects", async () => {
+it("starts a plain chat from Needs you, about no item, then disconnects", { skip: !CHAT_CONFIG && "chat is off in this deployment (no session source)" }, async () => {
   const t = tracker([], [], [{ status: 200, body: { workflow_run_id: RUN } }]);
   t.world.onDispatch = () => { t.world.runs = [run("in_progress")]; t.world.comments.push(endpointComment(RUN)); };
   const m = mount(t.gh);
@@ -954,18 +954,18 @@ it("opens a card's chat with its item, ask and links, passing only links on its 
   m.panel.dispose();
 });
 
-const TARGET_PATH = "/repos/cgwalters-forge/tracker/issues/50";
-const TARGET_URL = "https://github.com/cgwalters-forge/tracker/issues/50";
+const TARGET_PATH = "/repos/jmarrero-forge/tracker/issues/50";
+const TARGET_URL = "https://github.com/jmarrero-forge/tracker/issues/50";
 
 /** tracker#50's needs-human Answer card and the real main.ts hooks, with GitHub answering as `opts` say. */
 function answerCard(opts: { login?: string; askChanges?: boolean; release?: number; kind?: string } = {}) {
   let reads = 0;
   const f = scriptedFetch((method, u) => {
     const p = new URL(u).pathname;
-    if (p === "/user") return { body: { login: opts.login ?? "cgwalters" } };
+    if (p === "/user") return { body: { login: opts.login ?? "jmarrero" } };
     if (method === "GET" && p === TARGET_PATH) return { body: { title: "Which way?", body: "Q: Which way?", state: "open", html_url: TARGET_URL, labels: [{ name: "needs-human" }] } };
     if (p === "/graphql") {
-      const nodes = opts.askChanges && reads++ > 0 ? [{ author: { login: "cgwalters-bot" }, body: "A new ask" }] : [];
+      const nodes = opts.askChanges && reads++ > 0 ? [{ author: { login: "jmarrero-bot" }, body: "A new ask" }] : [];
       return { body: { data: { repository: { issueOrPullRequest: { comments: { nodes } } } } } };
     }
     if (method === "POST" && p === `${TARGET_PATH}/comments`) return { status: 201, body: { html_url: `${TARGET_URL}#issuecomment-1` } };
@@ -981,7 +981,7 @@ function answerCard(opts: { login?: string; askChanges?: boolean; release?: numb
   return { state, card, writes, item: () => inboxHooks(state).chatItem!(card)! };
 }
 
-it("constructed publication contract cases revoke an open chat's answer authority for groups or refusals", async () => {
+it("constructed publication contract cases revoke an open chat's answer authority for groups or refusals", { skip: !CHAT_CONFIG && "chat is off in this deployment (no session source)" }, async () => {
   for (const [numbers, carried] of [[[50, 51], false], [[50], false], [[50, 51], true], [[50, 0], false]] as const) {
     const r = answerCard();
     const captured = await r.item().answer!();
@@ -1001,16 +1001,16 @@ it("constructed publication contract cases revoke an open chat's answer authorit
     if (!l.refused) {
       const grouped = publishedCards(r.state.published.asks)[0]!;
       const item = inboxHooks(r.state).chatItem!(grouped)!;
-      assert.equal(item.ref, "cgwalters-forge/tracker#50");
+      assert.equal(item.ref, "jmarrero-forge/tracker#50");
       assert.equal(item.answer, undefined);
     }
   }
 });
 
-it("answers a card from its chat through the cards' guarded answer-and-release path", async () => {
+it("answers a card from its chat through the cards' guarded answer-and-release path", { skip: !CHAT_CONFIG && "chat is off in this deployment (no session source)" }, async () => {
   const ok = answerCard();
   const item = ok.item();
-  assert.equal(item.ref, "cgwalters-forge/tracker#50");
+  assert.equal(item.ref, "jmarrero-forge/tracker#50");
   assert.deepEqual(item.links, [TARGET_URL]);
   const a = await item.answer!();
   assert.equal(a.release, true);
@@ -1030,7 +1030,7 @@ it("answers a card from its chat through the cards' guarded answer-and-release p
   assert.deepEqual(other.writes(), [["POST", `${TARGET_PATH}/comments`]]);
 
   // A changed ask and another token's viewer send nothing, and may be tried again.
-  for (const [opts, why] of [[{ askChanges: true }, /ask changed/], [{ login: "someone" }, /not cgwalters's/]] as const) {
+  for (const [opts, why] of [[{ askChanges: true }, /ask changed/], [{ login: "someone" }, /not jmarrero's/]] as const) {
     const r = answerCard(opts);
     await assert.rejects((await r.item().answer!()).send("Go left."), (e: Error) => !(e instanceof MaybeSentError) && why.test(e.message));
     assert.deepEqual(r.writes(), [], why.source);
@@ -1047,7 +1047,7 @@ it("answers a card from its chat through the cards' guarded answer-and-release p
 it("in a chat about a card, only a confirmed Answer posts; prompts only talk to the agent", async () => {
   const t = tracker([run("in_progress")], [statusComment(RUN)]);
   const sent: string[] = [];
-  const outcomes = [() => Promise.reject(new Error("this token is someone's, not cgwalters's; nothing was sent")), () => Promise.reject(new MaybeSentError("Comment failed or uncertain"))];
+  const outcomes = [() => Promise.reject(new Error("this token is someone's, not jmarrero's; nothing was sent")), () => Promise.reject(new MaybeSentError("Comment failed or uncertain"))];
   const answer: ChatAnswer = { target: ITEM.ref, ask: "Q: Which way?", release: true, send: (text) => { sent.push(text); return outcomes.shift()!(); } };
   const m = mount(t.gh);
   assert.equal(m.button(/Answer/).hidden, true);
@@ -1068,7 +1068,7 @@ it("in a chat about a card, only a confirmed Answer posts; prompts only talk to 
   assert.deepEqual(sent, []);
   Object.assign(globalThis, { confirm: () => true });
   m.button(/Answer/).click();
-  await until("refused", () => /^Not sent: .*not cgwalters's/.test(m.slot.querySelector(".chat-form .status")!.textContent!));
+  await until("refused", () => /^Not sent: .*not jmarrero's/.test(m.slot.querySelector(".chat-form .status")!.textContent!));
   assert.equal(m.button(/Answer/).disabled, false);
   m.button(/Answer/).click();
   await until("uncertain", () => /Not sent, or uncertain/.test(m.slot.querySelector(".chat-form .status")!.textContent!));

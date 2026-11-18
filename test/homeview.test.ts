@@ -7,13 +7,13 @@ import { fixture, installDom } from "./helpers.ts";
 
 const win = installDom();
 const render = createRenderer(win as unknown as Parameters<typeof createRenderer>[0]);
-const TRACKER = "https://github.com/cgwalters-forge/tracker/issues";
+const TRACKER = "https://github.com/jmarrero-forge/tracker/issues";
 const hooks = { toggled: () => {} };
 const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, " ").trim() ?? "";
 afterEach(resetExpanded);
 
 function tracked(n: number, over: Partial<Item> = {}): Item {
-  return { id: n, nodeId: `PVTI_${n}`, kind: "issue", title: `Question ${n}`, body: `Blocks: ${TRACKER}/9\nQ: which?\nOptions:\nA) this\nB) that\n`, why: "", branch: [], gist: [], labels: ["question"], status: "Needs human", url: `${TRACKER}/${n}`, ref: { owner: "cgwalters-forge", repo: "tracker", number: n }, state: "open", author: "cgwalters-bot", assignees: ["cgwalters"], ...over };
+  return { id: n, nodeId: `PVTI_${n}`, kind: "issue", title: `Question ${n}`, body: `Blocks: ${TRACKER}/9\nQ: which?\nOptions:\nA) this\nB) that\n`, why: "", branch: [], gist: [], labels: ["question"], status: "Needs human", url: `${TRACKER}/${n}`, ref: { owner: "jmarrero-forge", repo: "tracker", number: n }, state: "open", author: "jmarrero-bot", assignees: ["jmarrero"], ...over };
 }
 
 describe("Needs you and published Status", () => {

@@ -16,7 +16,7 @@ const raw = fixture<Record<string, unknown>>("needs-you-661.json");
 const parsed = parseNeedsYou(raw);
 assert.ok(typeof parsed === "object");
 const cards = inboxCards({ published: { asks: parsed.items, list: parsed, unavailable: false } });
-const key = (n: string) => `cgwalters-forge/${n}`;
+const key = (n: string) => `jmarrero-forge/${n}`;
 const hooks: InboxHooks = { now: Date.parse(parsed.validatedAt), mayAct: true, render: createRenderer(win as unknown as Parameters<typeof createRenderer>[0]), answerEntry: async () => {} };
 
 test("661 publication: epic chain, activity map and an identity without its detail", () => {
@@ -52,7 +52,7 @@ test("661 publication: in-progress default, focus first, approvals first, honest
   chips.querySelectorAll<HTMLButtonElement>("button")[5]!.click();
   assert.equal(chosen, "all");
   const twin = epicChips(epicSelection(cards, [...parsed.epics!, { item: "other/tracker#976", active: true, activeWhy: ["open-pr"], complete: true, focus: false }], "active"), "active", () => {});
-  assert.match(twin.textContent!, /Focus: cgwalters-forge\/tracker#976 · 2.*other\/tracker#976 · 0/, "chips stay distinct without the owner");
+  assert.match(twin.textContent!, /Focus: jmarrero-forge\/tracker#976 · 2.*other\/tracker#976 · 0/, "chips stay distinct without the owner");
 });
 
 test("a capped publication: placeholders only, approvals still first, the cap counted apart", () => {
@@ -98,7 +98,7 @@ test("epic sorting keeps pending published asks before local cards and completed
 
 test("bare epic links and viewer-specific choices survive blocked storage", () => {
   assert.deepEqual(parseRoute("#epic-976"), { route: "home", view: "inbox" });
-  assert.equal(epicChoice("one", "#epic-976"), "epic:cgwalters-forge/tracker#976");
+  assert.equal(epicChoice("one", "#epic-976"), "epic:jmarrero-forge/tracker#976");
   const old = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const storageWindow = new JSDOM("", { url: "https://example.test" }).window;
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storageWindow.localStorage });
@@ -118,12 +118,12 @@ test("approve rows: one line with what the pass publishes, and Approve submits i
   const list = document.createElement("div");
   const calls: string[] = [];
   win.confirm = () => true;
-  fillInbox(list, cards, { ...hooks, approve: async (_a, head) => { calls.push(head); return { pr: { owner: "cgwalters-forge", repo: "tracker", number: 1261 }, status: "approved", url: "https://github.com/cgwalters-forge/tracker/pull/1261#review" }; }, answerBody: async () => document.createElement("form") });
+  fillInbox(list, cards, { ...hooks, approve: async (_a, head) => { calls.push(head); return { pr: { owner: "jmarrero-forge", repo: "tracker", number: 1261 }, status: "approved", url: "https://github.com/jmarrero-forge/tracker/pull/1261#review" }; }, answerBody: async () => document.createElement("form") });
   const row = list.querySelector<HTMLElement>(`[data-key="${key("tracker#1261")}"]`)!;
   assert.ok(row.classList.contains("c-approve"));
-  assert.match(row.textContent!, /Controller PR approved by the review job.*cgwalters-forge\/tracker#1261 · review-approve/);
+  assert.match(row.textContent!, /Controller PR approved by the review job.*jmarrero-forge\/tracker#1261 · review-approve/);
   assert.match(row.querySelector(".approval-evidence")!.textContent!, /^Diff, CI and review unknown: no matching published evidenceReview the diff$/);
-  assert.equal(row.querySelector<HTMLAnchorElement>(".approval-evidence a")!.getAttribute("href"), "#pr/cgwalters-forge/tracker/1261");
+  assert.equal(row.querySelector<HTMLAnchorElement>(".approval-evidence a")!.getAttribute("href"), "#pr/jmarrero-forge/tracker/1261");
   const withheld = document.createElement("div");
   fillInbox(withheld, cards.filter((c) => c.key === key("tracker#1300")), hooks);
   assert.match(withheld.querySelector(".card-head")!.textContent!, /Review withheld/);

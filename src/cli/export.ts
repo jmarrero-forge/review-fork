@@ -14,7 +14,7 @@ import { type PrReason, type PrWait, REASON_LABEL } from "../github/waiting.ts";
 export const SCHEMA = "review-queue/v1";
 
 /** Where the app is published; an entry's `appUrl` is this plus its route. */
-export const APP_URL = "https://cgwalters-forge.github.io/review/";
+export const APP_URL = "https://jmarrero.github.io/review/";
 
 /**
  * What to do about an entry, as one verb:

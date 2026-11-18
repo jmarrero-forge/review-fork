@@ -17,7 +17,7 @@
 // (test/e2e/live-report.ts), which .github/workflows/live.yml posts for agents.
 
 import { expect, type Page, test } from "@playwright/test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 import { DECISION, FIXTURE_DATA, type FixtureData, FIXTURE_TOKEN, fixtureResponse, isWrite, SESSION_ENDPOINT } from "../e2e/fixture-api.ts";
 import { countProblems, DIAGNOSTICS, diagnosticTexts, liveReport, type ViewReport } from "../e2e/live-report.ts";
@@ -158,7 +158,7 @@ test("Needs you and Status render without errors", async ({ page }) => {
     // Live agents from the Actions API: one row per run, each with Cancel, within the page's width.
     const live = page.locator(".live-run");
     await expect(live).toHaveCount(3);
-    await expect(live.first()).toContainText("bootc-dev/cgwalters-devspace-sandbox#36");
+    await expect(live.first()).toContainText("bootc-dev/jmarrero-devspace-sandbox#36");
     await expect(live.getByRole("button", { name: "Cancel" })).toHaveCount(3);
     await expect(page.locator(".live-agents")).not.toContainText("Incomplete:");
     await expect(page.locator(".live-agents")).not.toContainText("39698121265");
@@ -247,7 +247,7 @@ test("expired browser token returns to sign-in and forgets it", async ({ page })
 test("writes require session opt-in and reload returns to read-only", async ({ page }) => {
   test.skip(!!LIVE_TOKEN, "offline write policy regression");
   problems = await serve(page);
-  await page.route(`${API}/repos/cgwalters-forge/tracker`, (route) => route.fulfill({ json: { default_branch: "main", permissions: { push: true } } }));
+  await page.route(`${API}/repos/jmarrero-forge/tracker`, (route) => route.fulfill({ json: { default_branch: "main", permissions: { push: true } } }));
   await page.goto("#inbox");
   await page.locator(".signin input[type=password]").fill(FIXTURE_TOKEN);
   await page.locator(".signin button[type=submit]").click();
@@ -270,7 +270,7 @@ test("writes require session opt-in and reload returns to read-only", async ({ p
   await screenshot(page, "write-policy");
   await page.getByRole("button", { name: "More", exact: true }).click();
   let dispatches = 0;
-  await page.route(`${API}/repos/cgwalters-forge/tracker/actions/workflows/poll.yml/dispatches`, (route) => {
+  await page.route(`${API}/repos/jmarrero-forge/tracker/actions/workflows/poll.yml/dispatches`, (route) => {
     dispatches++;
     return route.fulfill({ status: 422, json: { message: "Workflow refused the dispatch" } });
   });
@@ -288,10 +288,10 @@ test("writes require session opt-in and reload returns to read-only", async ({ p
 test("an open item offers the operator a read-only-guarded agent dispatch", async ({ page }) => {
   test.skip(!!LIVE_TOKEN, "offline item fixture");
   problems = await serve(page);
-  const issue = { __typename: "Issue", id: "I_5", title: "Fix the flaky poll", body: "The poll times out about once a day.", url: "https://github.com/cgwalters-forge/tracker/issues/5", state: "OPEN", projectItems: { nodes: [], pageInfo: { hasNextPage: false } } };
+  const issue = { __typename: "Issue", id: "I_5", title: "Fix the flaky poll", body: "The poll times out about once a day.", url: "https://github.com/jmarrero-forge/tracker/issues/5", state: "OPEN", projectItems: { nodes: [], pageInfo: { hasNextPage: false } } };
   await page.route(`${API}/graphql`, (route) => route.request().postData()?.includes("issue(number:$number)")
     ? route.fulfill({ json: { data: { repository: { issue } } } }) : route.fallback());
-  await page.goto("#issue/cgwalters-forge/tracker/5");
+  await page.goto("#issue/jmarrero-forge/tracker/5");
   await page.locator(".signin input[type=password]").fill(FIXTURE_TOKEN);
   await page.locator(".signin button[type=submit]").click();
   const form = page.locator("form.item-dispatch");
@@ -319,7 +319,7 @@ test("Act now's decisions come first, with labelled needs-human issues read-only
   // agent-board#308 is published, so only tracker#1401 is listed from the label.
   const labelled = actNow.locator(".act-now-labelled li");
   await expect(labelled).toHaveCount(1);
-  await expect(labelled.getByRole("link", { name: "cgwalters-forge/tracker#1401" })).toHaveAttribute("href", "https://github.com/cgwalters-forge/tracker/issues/1401");
+  await expect(labelled.getByRole("link", { name: "jmarrero-forge/tracker#1401" })).toHaveAttribute("href", "https://github.com/jmarrero-forge/tracker/issues/1401");
   await expect(labelled).toContainText("unblocks unknown");
   await expect(actNow.locator(".act-now-labelled").locator("button, input, form")).toHaveCount(0);
   const focus = page.getByRole("region", { name: "Focus", exact: true });
@@ -346,18 +346,20 @@ const PROPOSALS = [
   "I can't write, but here is what I'd do:",
   "```agent-board-action",
   JSON.stringify({ schema: "agent-board/operator-action/v1", title: "Close the finished chat issue", why: "Its pull request merged and nothing is left to do.", actions: [
-    { type: "close_issue", repo: "cgwalters-forge/review", number: 275, reason: "Done in the merged pull request; closing." },
-    { type: "add_label", repo: "cgwalters-forge/review", number: 275, label: "shipped" },
+    { type: "close_issue", repo: "jmarrero/review", number: 275, reason: "Done in the merged pull request; closing." },
+    { type: "add_label", repo: "jmarrero/review", number: 275, label: "shipped" },
   ] }, null, 2),
   "```",
   "And a follow-up comment:",
   "```agent-board-action",
-  JSON.stringify({ schema: "agent-board/operator-action/v1", title: "Thank the reviewer", why: "Courtesy.", actions: [{ type: "comment_issue", repo: "cgwalters-forge/review", number: 275, body: "Thanks!" }] }),
+  JSON.stringify({ schema: "agent-board/operator-action/v1", title: "Thank the reviewer", why: "Courtesy.", actions: [{ type: "comment_issue", repo: "jmarrero/review", number: 275, body: "Thanks!" }] }),
   "```",
 ].join("\n");
 
 test("Chat shows an agent's proposals as preview cards", async ({ page }) => {
   test.skip(!!LIVE_TOKEN, "the session socket is answered here, from fixtures only");
+  // Chat is off in jmarrero's deployment: no session source yet.
+  test.skip(!JSON.parse(readFileSync("src/github/chat-config.json", "utf8")).sources.length, "chat is off in this deployment (no session source)");
   problems = await serve(page);
   // The session bridge: ACP over the socket, answering a prompt with the proposals.
   await page.routeWebSocket(SESSION_ENDPOINT, (ws) => ws.onMessage((text) => {

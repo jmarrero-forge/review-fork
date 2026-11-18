@@ -7,20 +7,20 @@ export const API_ROOT = "https://api.github.com";
  * The Workstream board, a Projects v2 board owned by an organization:
  * GitHub Apps can write org projects, not a user's (cgwalters-forge/tracker#144).
  */
-export const BOARD_OWNER = "cgwalters-forge";
+export const BOARD_OWNER = "jmarrero-forge";
 export const BOARD_NUMBER = 1;
 export const BOARD_URL = `https://github.com/orgs/${BOARD_OWNER}/projects/${BOARD_NUMBER}`;
 
 /** The only login whose answers the bot acts on. */
-export const OPERATOR = "cgwalters";
+export const OPERATOR = "jmarrero";
 /** His sign-off, as `bot-pr promote` adds it where upstream wants DCO. */
-export const OPERATOR_SIGNOFF = { name: "Colin Walters", email: "walters@verbum.org" } as const;
+export const OPERATOR_SIGNOFF = { name: "Joseph Marrero Corchado", email: "jmarrero@redhat.com" } as const;
 
 /** The Status of an item blocked on his decision or action. */
 export const NEEDS_HUMAN = "Needs human";
 /** The Status of an item ready for his review (a forge PR or a gist). */
 export const DRAFT = "Draft";
-/** The Statuses that put an item in the queue (the board's "Needs cgwalters" view). */
+/** The Statuses that put an item in the queue (the board's "Needs jmarrero" view). */
 export const QUEUE_STATUSES: readonly string[] = [NEEDS_HUMAN, DRAFT];
 /** The Status of an item whose PR is open upstream. */
 export const IN_REVIEW = "In Review";
@@ -32,9 +32,9 @@ export const IN_REVIEW = "In Review";
 export const LINKED_STATUSES: readonly string[] = [IN_REVIEW];
 
 /** The organization holding the forks where the bot proposes draft PRs. */
-export const FORGE_ORG = "cgwalters-forge";
+export const FORGE_ORG = "jmarrero-forge";
 /** The bot's login: the forge PRs listed are the ones it opened. */
-export const BOT_LOGIN = "cgwalters-bot";
+export const BOT_LOGIN = "jmarrero-bot";
 /**
  * The role apps the bot also writes as (cgwalters-forge/tracker#766), by
  * bot login (`SLUG[bot]`) with the role shown next to what each wrote.
@@ -85,7 +85,7 @@ export const DONE = "Done";
  * The public repository where every board item that isn't an upstream
  * issue or PR is an issue, questions for him included.
  */
-export const TRACKER_REPO = "cgwalters-forge/tracker";
+export const TRACKER_REPO = "jmarrero-forge/tracker";
 /** The label the bot puts on a question issue in TRACKER_REPO. */
 export const QUESTION_LABEL = "question";
 /** ... on an issue asking him to review a PR. */
@@ -154,7 +154,7 @@ export const PAGE_SIZE = 100;
 export const RECENT_COMMENTS = 5;
 
 /** Where agent runs come from (bin/bot-runs in homegit). */
-export const DEVSPACE_REPO = "bootc-dev/cgwalters-devspace-sandbox";
+export const DEVSPACE_REPO = "bootc-dev/jmarrero-devspace-sandbox";
 export const AGENT_WORKFLOW = "agent.yml";
 /** The Status of an item the bot is working on. */
 export const IN_PROGRESS = "In Progress";
@@ -165,14 +165,14 @@ export const OPS_POLL_INTERVAL_MS = 60_000;
  * TRACKER_REPO issue ("Bot heartbeat", pinned and locked), which
  * bin/bot-heartbeat in homegit edits in place.
  */
-export const HEARTBEAT_ISSUE = 176;
+export const HEARTBEAT_ISSUE = 1;
 /**
  * The plan's usage is private: bin/bot-heartbeat keeps it in the one
  * comment by BOT_LOGIN on this issue ("Bot usage", locked) of a private
  * repository, read with the viewer's own token. Nothing of it is in the
  * build. The pass's holds snapshot (holds.ts) is another comment there.
  */
-export const USAGE_REPO = "cgwalters-forge/bot-ops";
+export const USAGE_REPO = "jmarrero-forge/bot-ops";
 export const USAGE_ISSUE = 1;
 /** A heartbeat older than this is stale... */
 export const HEARTBEAT_STALE_MS = 15 * 60_000;

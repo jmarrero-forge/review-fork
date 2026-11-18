@@ -20,12 +20,12 @@ import { compressedHolds, publishedTestHolds, rawActNow } from "../helpers.ts";
 export const FIXTURE_DATA = ["real", "661", "group", "approval", "174", "174-capped", "174-grouped", "259", "decisions"] as const;
 
 /** `decisions`' agent-board#308-shaped decision, published with a synthetic count. */
-export const DECISION = "cgwalters-forge/agent-board#308";
+export const DECISION = "jmarrero-forge/agent-board#308";
 
 /** `decisions`' open needs-human issues: one also published, one only labelled. */
 const LABELLED = [
   { html_url: `https://github.com/${DECISION.replace("#", "/issues/")}`, title: "Promotion posture for approved midstream PRs" },
-  { html_url: "https://github.com/cgwalters-forge/tracker/issues/1401", title: "Which forge holds the release notes?" },
+  { html_url: "https://github.com/jmarrero-forge/tracker/issues/1401", title: "Which forge holds the release notes?" },
 ];
 
 export type FixtureData = (typeof FIXTURE_DATA)[number];
@@ -61,7 +61,7 @@ function needsYou(data: FixtureData, at: string): Record<string, unknown> {
   if (data === "decisions") {
     // Synthetic: 12 is not a claim about agent-board#308's live count.
     const decision = { ...published.items[0], key: DECISION, item: DECISION, ask: "Which promotion posture?", target: `https://github.com/${DECISION.replace("#", "/issues/")}`,
-      priority: "P1", action: { type: "issue", repository: "cgwalters-forge/agent-board", number: 308 }, source_ref: { type: "hold", repository: "cgwalters-forge/agent-board", number: 308 } };
+      priority: "P1", action: { type: "issue", repository: "jmarrero-forge/agent-board", number: 308 }, source_ref: { type: "hold", repository: "jmarrero-forge/agent-board", number: 308 } };
     const items = [...published.items, decision];
     const request = published.requests.find((r: { key: string }) => r.key === published.items[0].key);
     const requests = [...published.requests, { ...request, key: DECISION, identity: `github.com/${DECISION}/question`, question: decision.ask, target: decision.action, sources: [decision.source_ref] }];
@@ -69,10 +69,10 @@ function needsYou(data: FixtureData, at: string): Record<string, unknown> {
       counts: { decisions: items.length, groups: 0, members: items.length }, act_now: [rawActNow(decision, 12), rawActNow(published.items[0], 2)] };
   }
   const bucketed = fixture("draft-review-needs-you.json");
-  const key = "cgwalters-forge/bootc#1";
-  const epic = "cgwalters-forge/tracker#976";
-  const action = { type: "pull_request", repository: "cgwalters-forge/bootc", number: 1 };
-  const request = published.requests.find((r: { key: string }) => r.key === "cgwalters-forge/tracker#1261");
+  const key = "jmarrero-forge/bootc#1";
+  const epic = "jmarrero-forge/tracker#976";
+  const action = { type: "pull_request", repository: "jmarrero-forge/bootc", number: 1 };
+  const request = published.requests.find((r: { key: string }) => r.key === "jmarrero-forge/tracker#1261");
   return {
     ...published, review_buckets: bucketed.review_buckets, count: published.count + 1, counts: { decisions: 9, groups: 1, members: 11 },
     items: [...published.items, { key, item: key, source: "reviews", kind: "review-promote", priority: null, waiting_since: "2026-11-04T19:00:00Z", ask: "3 draft PRs waiting for promotion",
@@ -93,7 +93,7 @@ export const isWrite = (method: string, pathname: string, body: string | undefin
  */
 export function fixtureResponse(data: FixtureData, method: string, pathname: string, body: string | undefined, now = Date.now()): unknown {
   if (isWrite(method, pathname, body)) throw new Error(`refusing ${method} ${pathname}`);
-  if (pathname === "/user") return { login: "cgwalters" };
+  if (pathname === "/user") return { login: "jmarrero" };
   if (/\/issues\/\d+\/comments$/.test(pathname)) {
     const at = new Date(now - 60_000).toISOString();
     const pass_view = fixture("pass-view.json").pass_view;
@@ -108,7 +108,7 @@ export function fixtureResponse(data: FixtureData, method: string, pathname: str
       const snapshot = fixture("needs-you-259.json");
       snapshot.at = snapshot.needs_you.validated_at = snapshot.needs_you.changed_at = at;
       snapshot.pass_view = pass_view;
-      return [{ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\`` }];
+      return [{ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\`` }];
     }
     const list = needsYou(data, at);
     list.context = { observed_at: at, sources: { holds: "complete", runs: "partial" }, omitted: 2, limits: {}, items: [
@@ -129,14 +129,14 @@ export function fixtureResponse(data: FixtureData, method: string, pathname: str
     passes.published_at = at;
     const report = { ...fixture("maintainer-report.json"), generated_at: at };
     return [...compressedHolds(`<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${holds}\n\`\`\`\n`, at, FIXTURE_PART_CHARS),
-      { user: { login: "cgwalters-bot" }, body: `<!-- agent-board-passes v1 -->\n\n\`\`\`json\n${JSON.stringify(passes)}\n\`\`\`` },
-      { id: 42, user: { login: "cgwalters-bot" }, body: `<!-- agent-board-maintainer-report -->\n\n\`\`\`agent-board/maintainer-report/v1\n${JSON.stringify(report)}\n\`\`\`` }];
+      { user: { login: "jmarrero-bot" }, body: `<!-- agent-board-passes v1 -->\n\n\`\`\`json\n${JSON.stringify(passes)}\n\`\`\`` },
+      { id: 42, user: { login: "jmarrero-bot" }, body: `<!-- agent-board-maintainer-report -->\n\n\`\`\`agent-board/maintainer-report/v1\n${JSON.stringify(report)}\n\`\`\`` }];
   }
-  if (pathname === "/repos/cgwalters-forge/tracker/actions/workflows/poll.yml/runs") return { total_count: 0, workflow_runs: [] };
+  if (pathname === "/repos/jmarrero-forge/tracker/actions/workflows/poll.yml/runs") return { total_count: 0, workflow_runs: [] };
   // One chat session run whose agent job is on the tailnet; the browser test answers its socket.
-  if (pathname === "/repos/cgwalters-forge/tracker/actions/workflows/session.yml/runs") return { workflow_runs: [{ id: SESSION_RUN, run_attempt: 1, status: "in_progress", display_title: "Operator session (claude)", created_at: new Date(now - 60_000).toISOString(), actor: { login: "cgwalters" } }] };
-  if (pathname === "/repos/cgwalters-forge/tracker/issues/728") return { comments: 1 };
-  if (pathname === `/repos/cgwalters-forge/tracker/actions/runs/${SESSION_RUN}/jobs`) {
+  if (pathname === "/repos/jmarrero-forge/tracker/actions/workflows/session.yml/runs") return { workflow_runs: [{ id: SESSION_RUN, run_attempt: 1, status: "in_progress", display_title: "Operator session (claude)", created_at: new Date(now - 60_000).toISOString(), actor: { login: "jmarrero" } }] };
+  if (pathname === "/repos/jmarrero-forge/tracker/issues/728") return { comments: 1 };
+  if (pathname === `/repos/jmarrero-forge/tracker/actions/runs/${SESSION_RUN}/jobs`) {
     return { jobs: [{ name: "run / agent", status: "in_progress", steps: [{ name: TAILNET_STEP, status: "completed", conclusion: "success" }, { name: "Run task", status: "in_progress", conclusion: null, started_at: new Date(now - 30_000).toISOString() }] }] };
   }
   // Live agents: the same runs answer every status query; the app keeps each once.
@@ -146,14 +146,14 @@ export function fixtureResponse(data: FixtureData, method: string, pathname: str
       const started = new Date(now - minutes * 60_000).toISOString();
       return { id, display_title: title, status: "in_progress", created_at: started, run_started_at: started, repository: { full_name: agents[1] } };
     };
-    const runs = agents[1] === "cgwalters-forge/tracker"
-      ? [run(42, "implement cgwalters-forge/agent-board#733 (claude)", 7), run(43, "fix cgwalters-forge/agentic-job#3189 (openai)", 19), run(39698121265, "implement cgwalters-forge/agentic-job#1623 (openai)", 14 * 24 * 60)]
-      : [run(44, "research bootc-dev/cgwalters-devspace-sandbox#36 (claude, 64c)", 95)];
+    const runs = agents[1] === "jmarrero-forge/tracker"
+      ? [run(42, "implement jmarrero-forge/agent-board#733 (claude)", 7), run(43, "fix jmarrero-forge/agentic-job#3189 (openai)", 19), run(39698121265, "implement jmarrero-forge/agentic-job#1623 (openai)", 14 * 24 * 60)]
+      : [run(44, "research bootc-dev/jmarrero-devspace-sandbox#36 (claude, 64c)", 95)];
     // Replay a short page whose count disagrees, plus GitHub's stuck record.
     return { total_count: 4, workflow_runs: runs };
   }
   const pull = /^\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)$/.exec(pathname);
-  if (pull) return { html_url: `https://github.com/${pull[1]}/pull/${pull[2]}`, title: `Draft ${pull[2]}`, state: "open", draft: true, body: "", user: { login: "cgwalters-bot" }, head: { sha: (pull[2] === "2" ? "b" : "a").repeat(40) } };
+  if (pull) return { html_url: `https://github.com/${pull[1]}/pull/${pull[2]}`, title: `Draft ${pull[2]}`, state: "open", draft: true, body: "", user: { login: "jmarrero-bot" }, head: { sha: (pull[2] === "2" ? "b" : "a").repeat(40) } };
   if (pathname.endsWith("/check-runs")) return { total_count: 1, check_runs: [{ name: "ci", status: "completed", conclusion: "success" }] };
   if (pathname.endsWith("/status")) return { state: "success", statuses: [] };
   if (pathname.endsWith("/fields")) return fixture("fields.json");

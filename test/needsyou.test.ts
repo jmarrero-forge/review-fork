@@ -8,6 +8,7 @@ import { JSDOM, VirtualConsole } from "jsdom";
 import { pathToFileURL } from "node:url";
 import { performance } from "node:perf_hooks";
 import { usagePath } from "../src/github/usage.ts";
+import { DECISIONS_CONFIG } from "../src/github/decisiondocument.ts";
 import { fields, fixture, holdsComment, rawActNow, rawAsk, rawNeedsYou, realNeedsYouSnapshot } from "./helpers.ts";
 import { needsYou174 } from "./fixtures/needs-you-174.ts";
 
@@ -15,13 +16,13 @@ const T0 = Date.parse("2026-10-30T12:00:00Z");
 const MINUTE = 60_000;
 const iso = (t: number) => new Date(t).toISOString();
 const HOLDS = new URL(`https://api.github.com${usagePath}`).pathname;
-const FOCUS = "cgwalters-forge/tracker#976";
+const FOCUS = "jmarrero-forge/tracker#976";
 /** Act now's direct needs-human read, made only while the pass's list cannot vouch for it. */
 const SEARCH = "/search/issues";
 const epics = { [FOCUS]: { active: true, activeWhy: ["focus"], complete: true } };
-const proposal = (comment: number) => rawAsk(1013, { key: `cgwalters-forge/tracker#1013/comment-${comment}`, source: "proposals", kind: "operator-action", ask: `Decision ${comment}`, action: { type: "operator_action", repository: "cgwalters-forge/tracker", number: 1013, comment } });
-const proposalComment = (n: number) => ({ id: `IC_${n}`, databaseId: n, updatedAt: "2026-10-29T12:00:00Z", author: { login: "cgwalters-bot" }, editor: null, lastEditedAt: null,
-  body: `\`\`\`agent-board-action\n${JSON.stringify({ schema: "agent-board/operator-action/v1", title: `Decision ${n}`, why: `Reason ${n}`, actions: [{ type: "add_label", repo: "cgwalters-forge/tracker", number: 1013, label: `choice-${n}` }] })}\n\`\`\`` });
+const proposal = (comment: number) => rawAsk(1013, { key: `jmarrero-forge/tracker#1013/comment-${comment}`, source: "proposals", kind: "operator-action", ask: `Decision ${comment}`, action: { type: "operator_action", repository: "jmarrero-forge/tracker", number: 1013, comment } });
+const proposalComment = (n: number) => ({ id: `IC_${n}`, databaseId: n, updatedAt: "2026-10-29T12:00:00Z", author: { login: "jmarrero-bot" }, editor: null, lastEditedAt: null,
+  body: `\`\`\`agent-board-action\n${JSON.stringify({ schema: "agent-board/operator-action/v1", title: `Decision ${n}`, why: `Reason ${n}`, actions: [{ type: "add_label", repo: "jmarrero-forge/tracker", number: 1013, label: `choice-${n}` }] })}\n\`\`\`` });
 
 /** What the holds comment read answers next: a status, the comments, and whether an unchanged one is a 304. */
 interface Holds { status: number; comments: unknown[]; etag: string; gate?: Promise<void>; approvals?: Record<number, string[]>; fail?: number; labels?: string[]; reviewError?: number; writeGate?: Promise<void>; document?: string; merge?: "merged" | "enqueued" | "moved" | "denied";
@@ -33,7 +34,7 @@ let runs = 0;
 it("Focus shares the holds poll, ages on 304, and labels failed, malformed and absent publications", async (t) => {
   const data = { ...fixture<Record<string, unknown>>("epic-focus.json"), observed_at: iso(T0) };
   const raw: Record<string, unknown> = { schema: "agent-board/holds/v1", at: iso(T0), holds: [], epic_focus: data };
-  const comment = () => ({ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
+  const comment = () => ({ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
   const holds: Holds = { status: 200, etag: '"focus-1"', comments: [comment()] };
   const app = await boot(t, holds);
   try {
@@ -73,7 +74,7 @@ it("Today shares the inbox read, ages on 304, labels failures and recovers witho
   const today = { ...fixture<Record<string, unknown>>("today.json"), day: "2026-10-30", observed_at: iso(T0), cost: undefined,
     changes: { landed: 3, closed: 1, opened: 2, extra: { toString: null }, ...Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`extra-${i}`, "not a metric"])) } };
   const raw = { schema: "agent-board/holds/v1", at: iso(T0), holds: [], today: today as unknown };
-  const comment = () => ({ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
+  const comment = () => ({ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
   const holds: Holds = { status: 200, etag: '"today-1"', comments: [comment()] };
   const app = await boot(t, holds);
   try {
@@ -116,7 +117,7 @@ it("repository work shares the inbox poll, preserves source clocks on 304 and la
   const raw = fixture<Record<string, unknown>>("pass-view.json");
   raw.at = iso(T0);
   raw.dispatchable_work = fixture("dispatchable-work.json");
-  const comment = () => ({ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
+  const comment = () => ({ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
   const holds: Holds = { status: 200, etag: '"work-1"', comments: [comment()] };
   const app = await boot(t, holds);
   try {
@@ -145,7 +146,7 @@ it("repository work shares the inbox poll, preserves source clocks on 304 and la
 it("Repositories shares the pass read, retains unavailable facts, and replaces invalid reports visibly", async (t) => {
   const raw = fixture<Record<string, unknown>>("maintainer-report.json");
   raw.generated_at = iso(T0);
-  const report = { id: 42, user: { login: "cgwalters-bot" }, body: `<!-- agent-board-maintainer-report -->\n\`\`\`agent-board/maintainer-report/v1\n${JSON.stringify(raw)}\n\`\`\`` };
+  const report = { id: 42, user: { login: "jmarrero-bot" }, body: `<!-- agent-board-maintainer-report -->\n\`\`\`agent-board/maintainer-report/v1\n${JSON.stringify(raw)}\n\`\`\`` };
   const holds: Holds = { status: 200, comments: [report], etag: '"report-1"' };
   const app = await boot(t, holds);
   try {
@@ -207,7 +208,7 @@ async function boot(t: TestContext, holds: Holds) {
         if (holds.status !== 200) return json({ message: "Server Error" }, holds.status);
         return sent === holds.etag ? json(null, 304, { ETag: holds.etag }) : json(holds.comments, 200, { ETag: holds.etag });
       }
-      if (url.pathname === "/user") return json({ login: "cgwalters" });
+      if (url.pathname === "/user") return json({ login: "jmarrero" });
       if (holds.expired && method === "POST" && /\/issues\/\d+\/comments$/.test(url.pathname)) return json({ message: "Bad credentials" }, 401);
       if (url.pathname.endsWith("/merge") && method === "PUT") {
         assert.equal(JSON.parse(String(init?.body)).sha, "a".repeat(40));
@@ -223,19 +224,19 @@ async function boot(t: TestContext, holds: Holds) {
         if (pull[2]) {
           reads.reviews.push(n);
           if (holds.reviewError) return json({ message: "reviews unavailable" }, holds.reviewError);
-          return json((holds.approvals?.[n] ?? []).map((commit_id) => ({ user: { login: "cgwalters" }, state: "APPROVED", commit_id, submitted_at: "2026-11-03T00:00:00Z" })));
+          return json((holds.approvals?.[n] ?? []).map((commit_id) => ({ user: { login: "jmarrero" }, state: "APPROVED", commit_id, submitted_at: "2026-11-03T00:00:00Z" })));
         }
         return json({ state: "open", head: { sha: "a".repeat(40) } });
       }
       if (url.pathname.endsWith("/fields")) return json(fields());
       if (url.pathname === "/search/issues") return json({ items: [], total_count: 0 });
-      if (url.pathname === "/repos/cgwalters-forge/operator/issues/1") {
+      if (url.pathname === "/repos/jmarrero-forge/operator/issues/1") {
         if (method === "PATCH") holds.document = (JSON.parse(String(init?.body)) as { body: string }).body;
         return json({ body: holds.document ?? "" });
       }
-      if (url.pathname.startsWith("/repos/cgwalters-forge/tracker/issues/") && /\/issues\/\d+$/.test(url.pathname)) {
+      if (url.pathname.startsWith("/repos/jmarrero-forge/tracker/issues/") && /\/issues\/\d+$/.test(url.pathname)) {
         const n = url.pathname.split("/").at(-1);
-        return json({ title: `Issue ${n}`, body: `Q: Ask ${n}?`, state: "open", html_url: `https://github.com/cgwalters-forge/tracker/issues/${n}`, labels: (holds.labels ?? ["needs-human"]).map((name) => ({ name })) });
+        return json({ title: `Issue ${n}`, body: `Q: Ask ${n}?`, state: "open", html_url: `https://github.com/jmarrero-forge/tracker/issues/${n}`, labels: (holds.labels ?? ["needs-human"]).map((name) => ({ name })) });
       }
       if (url.pathname === "/graphql") {
         const { query } = JSON.parse(String(init?.body)) as { query: string };
@@ -246,11 +247,11 @@ async function boot(t: TestContext, holds: Holds) {
         }
         if (query.includes("mergeStateStatus")) return json({ data: { repository: {
           squashMergeAllowed: true, mergeCommitAllowed: false, rebaseMergeAllowed: false,
-          pullRequest: { id: "PR_1", url: "https://github.com/cgwalters-forge/tracker/pull/1", state: "OPEN", isDraft: false,
+          pullRequest: { id: "PR_1", url: "https://github.com/jmarrero-forge/tracker/pull/1", state: "OPEN", isDraft: false,
             headRefOid: (holds.merge === "moved" ? "b" : "a").repeat(40), mergeStateStatus: "CLEAN", viewerCanUpdate: true,
             isMergeQueueEnabled: holds.merge === "enqueued", mergeQueueEntry: null },
         } } });
-        if (query.includes("issue(number:$number)")) return json({ data: { repository: { issue: { __typename: "Issue", id: "I_5", title: "Issue 5", body: "", url: "https://github.com/cgwalters-forge/tracker/issues/5", state: "OPEN", projectItems: { nodes: [], pageInfo: { hasNextPage: false } } } } } });
+        if (query.includes("issue(number:$number)")) return json({ data: { repository: { issue: { __typename: "Issue", id: "I_5", title: "Issue 5", body: "", url: "https://github.com/jmarrero-forge/tracker/issues/5", state: "OPEN", projectItems: { nodes: [], pageInfo: { hasNextPage: false } } } } } });
         if (query.includes("issueOrPullRequest")) return json({ data: { repository: { issueOrPullRequest: { comments: { nodes: [] } } } } });
         if (query.includes("comments(first")) return json({ data: { repository: { issue: { state: "OPEN", comments: { nodes: [1, 2].map(proposalComment), pageInfo: { hasNextPage: false } } } } } });
         return json({ data: {} });
@@ -311,7 +312,7 @@ const listed = (at: number, items: unknown[], over: Record<string, unknown> = {}
 describe("Needs you from the pass's published list", () => {
   it("#259 excludes superseded #727/#728 holds and counts only rendered operator rows", async (t) => {
     const raw = fixture<Record<string, unknown>>("needs-you-259.json");
-    const comment = () => ({ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
+    const comment = () => ({ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` });
     const holds = { status: 200, etag: '"259"', comments: [comment()] };
     const app = await boot(t, holds);
     try {
@@ -322,8 +323,8 @@ describe("Needs you from the pass's published list", () => {
       assert.match(app.note(), /2 superseded hold decisions excluded/);
       // An actual published operator hold stays, independent of label/assignment
       // prose; a review wait also stays without an issue hold.
-      raw.needs_you = rawNeedsYou([rawAsk(50), rawAsk(51, { source: "reviews", kind: "review-approve", action: { type: "approve_pull_request", repository: "cgwalters-forge/tracker", number: 51, head: "a".repeat(40) } })], iso(T0));
-      raw.holds = [{ item: "cgwalters-forge/tracker#50", url: "https://github.com/cgwalters-forge/tracker/issues/50", epic: false, kind: "needs-human", reason: "Operator assigned", operator: true, priority: null, question: null }];
+      raw.needs_you = rawNeedsYou([rawAsk(50), rawAsk(51, { source: "reviews", kind: "review-approve", action: { type: "approve_pull_request", repository: "jmarrero-forge/tracker", number: 51, head: "a".repeat(40) } })], iso(T0));
+      raw.holds = [{ item: "jmarrero-forge/tracker#50", url: "https://github.com/jmarrero-forge/tracker/issues/50", epic: false, kind: "needs-human", reason: "Operator assigned", operator: true, priority: null, question: null }];
       holds.etag = '"259-current"'; holds.comments = [comment()];
       await app.reload();
       assert.equal(app.keys().length, 2);
@@ -364,9 +365,9 @@ describe("Needs you from the pass's published list", () => {
     } finally { await app.close(); }
   });
 
-  const decision = () => rawAsk(1, { key: "cgwalters-forge/operator#1/decision-12", item: "cgwalters-forge/operator#1", source: "decisions", kind: "document-decision", action: { type: "issue", repository: "cgwalters-forge/operator", number: 1 } });
+  const decision = () => rawAsk(1, { key: "jmarrero-forge/operator#1/decision-12", item: "jmarrero-forge/operator#1", source: "decisions", kind: "document-decision", action: { type: "issue", repository: "jmarrero-forge/operator", number: 1 } });
 
-  it("excludes a successfully answered document decision immediately, before the publication changes", async (t) => {
+  it("excludes a successfully answered document decision immediately, before the publication changes", { skip: !DECISIONS_CONFIG.document && "no decisions document in this deployment" }, async (t) => {
     const app = await boot(t, { status: 200, etag: '"decision"', comments: listed(T0, [decision()]), document: "### D12 Pick one\n- [ ] A) Yes\nReply:\n" });
     try {
       assert.equal(app.count(), "1");
@@ -378,13 +379,13 @@ describe("Needs you from the pass's published list", () => {
       await app.until(() => app.count() === "0", "immediate completed count");
       assert.match(app.doc.querySelector("#menu-meta")!.textContent!, /0/);
       assert.match(app.doc.querySelector(".inbox-pass")?.textContent ?? app.doc.querySelector("#sec-needs")!.textContent!, /1 rows \(1 with detail\): 0 waiting, 1 done here/);
-      assert.deepEqual(app.reads.writes, ["PATCH /repos/cgwalters-forge/operator/issues/1"]);
+      assert.deepEqual(app.reads.writes, ["PATCH /repos/jmarrero-forge/operator/issues/1"]);
       await app.reload();
       assert.equal(app.count(), "0", "the unchanged publication must not resurrect a local receipt");
     } finally { await app.close(); }
   });
 
-  it("explicit refresh rereads a changed decision only when inspected again", async (t) => {
+  it("explicit refresh rereads a changed decision only when inspected again", { skip: !DECISIONS_CONFIG.document && "no decisions document in this deployment" }, async (t) => {
     const holds = { status: 200, etag: '"decision"', comments: listed(T0, [decision()]), document: "### D12 Pick one\n- [ ] A) Old option\nReply:\n" };
     const app = await boot(t, holds);
     try {
@@ -402,13 +403,13 @@ describe("Needs you from the pass's published list", () => {
   });
 
   it("renders compact identities without discovering missing details, with explicit group totals and context", async (t) => {
-    const identities = [1, 2, 3].map((n) => ({ item: `cgwalters-forge/tracker#${n}`, source: "reviews", kind: "review-promote", waiting_since: iso(T0), epic: "unknown", ...(n === 2 ? { detail_key: "cgwalters-forge/tracker#1" } : {}) }));
+    const identities = [1, 2, 3].map((n) => ({ item: `jmarrero-forge/tracker#${n}`, source: "reviews", kind: "review-promote", waiting_since: iso(T0), epic: "unknown", ...(n === 2 ? { detail_key: "jmarrero-forge/tracker#1" } : {}) }));
     const context = { observed_at: iso(T0), wip: { in_flight: 2, limit: 3 }, sources: { step: "complete", run: "unread", usage: "partial" }, omitted: 2,
       items: [{ source: "step", item: "o/r#1", kind: "waiting", reason: "Checks pending", observed_at: iso(T0), since: null, url: "https://untrusted.invalid/" }], limits: { pool: { reason: "pace", used_percent: 80, limit_percent: 40 } } };
     const app = await boot(t, { status: 200, etag: '"inventory"', comments: listed(T0, [], { identities, count: 3, counts: { decisions: 3, groups: 1, members: 3 }, details_omitted: 3, context }) });
     try {
       assert.equal(app.count(), "2", "the heading and chips count rows, not grouped decisions");
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#1", "cgwalters-forge/tracker#3"]);
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#1", "jmarrero-forge/tracker#3"]);
       assert.match(app.doc.querySelector("#sec-needs")!.textContent!, /3 decisions reported: 3 listed, 0 not listed\. 2 rows \(0 with detail\): 2 waiting, 0 done here, 0 hidden by the epic filter\. Groups: 1, members: 3\./);
       const fold = app.doc.querySelector<HTMLDetailsElement>(".published-context")!;
       assert.equal(fold.open, false);
@@ -423,7 +424,7 @@ describe("Needs you from the pass's published list", () => {
 
   const approval = (n: number, digest = false) => rawAsk(n, { key: `up/proj#${n}${digest ? "/digest" : ""}`, item: `up/proj#${n}`, kind: digest ? "digest-approve" : "review-approve", source: digest ? "digest" : "reviews", action: { type: "approve_pull_request", repository: "up/proj", number: n, head: "a".repeat(40) } });
 
-  const mergeAsk = () => rawAsk(1, { action: { type: "pull_request", repository: "cgwalters-forge/tracker", number: 1, head: "a".repeat(40) } });
+  const mergeAsk = () => rawAsk(1, { action: { type: "pull_request", repository: "jmarrero-forge/tracker", number: 1, head: "a".repeat(40) } });
   const mergeRequest = () => ({ key: mergeAsk().key, forge: "github.com", quality: "decision", actions: [{ kind: "merge-or-enqueue", supported: true, reason: "checked" }] });
 
   it("never offers a new merge operation through the legacy missing-descriptor fallback", async (t) => {
@@ -451,13 +452,13 @@ describe("Needs you from the pass's published list", () => {
       const button = app.doc.querySelector<HTMLButtonElement>(".act-now li button");
       if (merge === "moved" || merge === "denied") assert.equal(button?.disabled, true, "no automatic fresh handler after refusal");
       else assert.equal(button, null, "completed ask leaves shortlist but keeps its receipt");
-      assert.deepEqual(app.reads.writes, merge === "moved" ? [] : merge === "enqueued" ? ["POST enqueuePullRequest"] : ["PUT /repos/cgwalters-forge/tracker/pulls/1/merge"]);
+      assert.deepEqual(app.reads.writes, merge === "moved" ? [] : merge === "enqueued" ? ["POST enqueuePullRequest"] : ["PUT /repos/jmarrero-forge/tracker/pulls/1/merge"]);
     } finally { await app.close(); }
   });
 
   it("Act now uses only the pass read, ranks groups and approves through the canonical card", async (t) => {
     const question = rawAsk(1, { ask: "Choose A or B" });
-    const group = rawAsk(2, { ask: "Approve the named PRs", action: { type: "pull_request", repository: "cgwalters-forge/tracker", number: 2 }, group: { reason: "shared verdict", numbers: [2, 3, 4] } });
+    const group = rawAsk(2, { ask: "Approve the named PRs", action: { type: "pull_request", repository: "jmarrero-forge/tracker", number: 2 }, group: { reason: "shared verdict", numbers: [2, 3, 4] } });
     const act_now = [rawActNow(approval(7), 63), rawActNow(group, 3), rawActNow(question)];
     const holds: Holds = { status: 200, etag: '"act-now"', comments: listed(T0, [question, group, approval(7)], { act_now }) };
     const app = await boot(t, holds);
@@ -466,7 +467,7 @@ describe("Needs you from the pass's published list", () => {
       assert.equal(slot.hidden, false);
       assert.equal(slot.parentElement, app.doc.querySelector(".home")!.firstElementChild, "decisions come before Focus and active work");
       assert.equal(slot.querySelector(".act-now-labelled"), null, "a complete, current list needs no direct read");
-      assert.deepEqual([...slot.querySelectorAll("li > a:first-child")].map((a) => a.textContent), ["cgwalters-forge/tracker#2", "cgwalters-forge/tracker#1", "up/proj#7"], "needs-human decisions first, then by count");
+      assert.deepEqual([...slot.querySelectorAll("li > a:first-child")].map((a) => a.textContent), ["jmarrero-forge/tracker#2", "jmarrero-forge/tracker#1", "up/proj#7"], "needs-human decisions first, then by count");
       assert.match(slot.textContent!, /3 PRs: shared verdict/);
       assert.deepEqual(app.reads.all.map((r) => r.path), ["/user", HOLDS], "no target reads to assemble Act now");
       slot.querySelector<HTMLButtonElement>("button")!.click();
@@ -522,7 +523,7 @@ describe("Needs you from the pass's published list", () => {
   it("real snapshot replay request and timing measurements", async (t) => {
     const raw = realNeedsYouSnapshot();
     const started = performance.now();
-    const app = await boot(t, { status: 200, etag: '"real-replay"', comments: [{ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` }] });
+    const app = await boot(t, { status: 200, etag: '"real-replay"', comments: [{ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify(raw)}\n\`\`\`` }] });
     try {
       const cold = { requests: app.reads.all.length, elapsedMs: performance.now() - started, paths: app.reads.all.map((r) => r.path) };
       const before = app.reads.all.length;
@@ -616,7 +617,7 @@ describe("Needs you from the pass's published list", () => {
   });
 
   for (const removed of [false, true]) it(`refuses review-needs-human release with ${removed ? "a removed" : "no"} label before commenting`, async (t) => {
-    const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0, [rawAsk(7, { kind: "review-needs-human", action: { type: "pull_request", repository: "cgwalters-forge/tracker", number: 7 } })]), labels: removed ? ["needs-human"] : [] };
+    const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0, [rawAsk(7, { kind: "review-needs-human", action: { type: "pull_request", repository: "jmarrero-forge/tracker", number: 7 } })]), labels: removed ? ["needs-human"] : [] };
     const app = await boot(t, holds);
     try {
       app.inspect();
@@ -633,7 +634,7 @@ describe("Needs you from the pass's published list", () => {
     const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0 - 5 * MINUTE, [rawAsk(9, { priority: "P2" }), rawAsk(3, { priority: "P0" })]) };
     const app = await boot(t, holds);
     try {
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#9", "cgwalters-forge/tracker#3"], "the pass ranks; the app doesn't");
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#9", "jmarrero-forge/tracker#3"], "the pass ranks; the app doesn't");
       assert.equal(app.count(), "2");
       assert.match(app.note(), /^The pass's list: confirmed 5m ago/);
       assert.equal(app.empty(), false);
@@ -679,7 +680,7 @@ describe("Needs you from the pass's published list", () => {
     try {
       holds.status = 502;
       await app.wake(2 * MINUTE);
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#1", "cgwalters-forge/tracker#2"]);
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#1", "jmarrero-forge/tracker#2"]);
       assert.equal(app.doc.querySelectorAll(".card-unavailable").length, 2);
       assert.match(app.note(), /^Couldn't read the pass's snapshot: .*marked unavailable until it can be read again\./);
       assert.equal(app.empty(), false);
@@ -687,19 +688,19 @@ describe("Needs you from the pass's published list", () => {
       holds.comments = listed(Date.now(), [rawAsk(2)]);
       holds.etag = '"b"';
       await app.wake(2 * MINUTE);
-      assert.deepEqual([app.keys(), app.doc.querySelectorAll(".card-unavailable").length], [["cgwalters-forge/tracker#2"], 0]);
+      assert.deepEqual([app.keys(), app.doc.querySelectorAll(".card-unavailable").length], [["jmarrero-forge/tracker#2"], 0]);
       assert.match(app.note(), /^The pass's list: confirmed/);
     } finally { await app.close(); }
   });
 
   it("shows an older pass's operator holds when the snapshot has no list, and says what isn't listed", async (t) => {
     const at = iso(T0);
-    const human = { item: "cgwalters-forge/tracker#446", url: "https://github.com/cgwalters-forge/tracker/issues/446", epic: false, kind: "needs-human", reason: "labelled needs-human", operator: true, priority: "P0", question: "Ship it?" };
+    const human = { item: "jmarrero-forge/tracker#446", url: "https://github.com/jmarrero-forge/tracker/issues/446", epic: false, kind: "needs-human", reason: "labelled needs-human", operator: true, priority: "P0", question: "Ship it?" };
     const wip = { item: null, url: null, epic: false, kind: "wip", reason: "2 of 2 runs active", operator: false, priority: null, question: null };
-    const old = { user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify({ schema: "agent-board/holds/v1", at, holds: [wip, human] })}\n\`\`\`\n` };
+    const old = { user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\n\`\`\`json\n${JSON.stringify({ schema: "agent-board/holds/v1", at, holds: [wip, human] })}\n\`\`\`\n` };
     const app = await boot(t, { status: 200, etag: '"a"', comments: [old] });
     try {
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#446"]);
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#446"]);
       assert.match(app.note(), /no needs-you list.*Shown: the snapshot's own operator holds; review waits, proposals and digest asks are not listed\./);
       assert.equal(app.empty(), false);
     } finally { await app.close(); }
@@ -709,16 +710,16 @@ describe("Needs you from the pass's published list", () => {
     const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0, [rawAsk(1)]) };
     const app = await boot(t, holds);
     try {
-      holds.comments = [holdsComment(iso(T0), undefined, [{ item: "cgwalters-forge/tracker#9", url: "https://github.com/cgwalters-forge/tracker/issues/9", epic: false, kind: "needs-human", reason: "new hold", operator: true, priority: "P0", question: "New ask" }])];
+      holds.comments = [holdsComment(iso(T0), undefined, [{ item: "jmarrero-forge/tracker#9", url: "https://github.com/jmarrero-forge/tracker/issues/9", epic: false, kind: "needs-human", reason: "new hold", operator: true, priority: "P0", question: "New ask" }])];
       holds.etag = '"b"';
       await app.wake(2 * MINUTE);
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#1", "cgwalters-forge/tracker#9"]);
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#1", "jmarrero-forge/tracker#9"]);
       assert.equal(app.doc.querySelectorAll(".card-unavailable").length, 1);
-      assert.match(app.doc.querySelector('[data-key="cgwalters-forge/tracker#9"]')!.textContent!, /New ask/);
+      assert.match(app.doc.querySelector('[data-key="jmarrero-forge/tracker#9"]')!.textContent!, /New ask/);
       holds.status = 502;
       for (let poll = 0; poll < 2; poll++) {
         await app.wake(2 * MINUTE);
-        assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#1", "cgwalters-forge/tracker#9"]);
+        assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#1", "jmarrero-forge/tracker#9"]);
         assert.equal(app.doc.querySelectorAll(".card-unavailable").length, 2);
       }
     } finally { await app.close(); }
@@ -728,9 +729,9 @@ describe("Needs you from the pass's published list", () => {
     const app = await boot(t, { status: 200, etag: '"a"', comments: listed(T0, [proposal(1), proposal(2)]) });
     try {
       app.inspect();
-      await app.until(() => [1, 2].every((n) => app.doc.querySelector(`[data-key="cgwalters-forge/tracker#1013/comment-${n}"]`)?.textContent?.includes(`Reason ${n}`)), "both inspected proposals");
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#1013/comment-1", "cgwalters-forge/tracker#1013/comment-2"]);
-      for (const n of [1, 2]) assert.match(app.doc.querySelector(`[data-key="cgwalters-forge/tracker#1013/comment-${n}"]`)!.textContent!, new RegExp(`Reason ${n}`));
+      await app.until(() => [1, 2].every((n) => app.doc.querySelector(`[data-key="jmarrero-forge/tracker#1013/comment-${n}"]`)?.textContent?.includes(`Reason ${n}`)), "both inspected proposals");
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#1013/comment-1", "jmarrero-forge/tracker#1013/comment-2"]);
+      for (const n of [1, 2]) assert.match(app.doc.querySelector(`[data-key="jmarrero-forge/tracker#1013/comment-${n}"]`)!.textContent!, new RegExp(`Reason ${n}`));
       assert.deepEqual(app.reads.writes, [], "nothing written");
     } finally { await app.close(); }
   });
@@ -748,8 +749,8 @@ describe("Needs you from the pass's published list", () => {
     const app = await boot(t, holds);
     try {
       app.inspect();
-      await app.until(() => !!app.doc.querySelector('[data-key="cgwalters-forge/tracker#1"] textarea'), "the answer form");
-      const text = app.doc.querySelector<HTMLTextAreaElement>('[data-key="cgwalters-forge/tracker#1"] textarea')!;
+      await app.until(() => !!app.doc.querySelector('[data-key="jmarrero-forge/tracker#1"] textarea'), "the answer form");
+      const text = app.doc.querySelector<HTMLTextAreaElement>('[data-key="jmarrero-forge/tracker#1"] textarea')!;
       text.value = "Half an answer";
       // The next read is slow, and lands while he types.
       let release = () => {};
@@ -762,14 +763,14 @@ describe("Needs you from the pass's published list", () => {
       assert.equal(app.count(), "2");
       release();
       await app.until(() => !!app.doc.querySelector(".card-stale-note"), "the gone note");
-      assert.deepEqual(app.keys().sort(), ["cgwalters-forge/tracker#1", "cgwalters-forge/tracker#2"], "kept where it was, the rest placed around it");
-      assert.equal(app.doc.querySelector('[data-key="cgwalters-forge/tracker#1"] textarea'), text);
+      assert.deepEqual(app.keys().sort(), ["jmarrero-forge/tracker#1", "jmarrero-forge/tracker#2"], "kept where it was, the rest placed around it");
+      assert.equal(app.doc.querySelector('[data-key="jmarrero-forge/tracker#1"] textarea'), text);
       assert.equal(text.value, "Half an answer");
       assert.equal(app.count(), "1", "departed drafts do not inflate outstanding decisions");
       assert.equal(app.doc.querySelector(".inbox-more"), null);
       delete holds.gate;
       await app.reload();
-      assert.deepEqual([app.keys(), app.count()], [["cgwalters-forge/tracker#2"], "1"]);
+      assert.deepEqual([app.keys(), app.count()], [["jmarrero-forge/tracker#2"], "1"]);
     } finally { await app.close(); }
   });
 
@@ -801,9 +802,9 @@ describe("Needs you from the pass's published list", () => {
 
   // `second` is the next row: in `grouped`, an approval without its detail ahead of every full non-approval row.
   const variants = [
-    { variant: "full", listed: 174, total: 174, detailed: 174, approvals: 1, second: "cgwalters-forge/tracker#2000" },
-    { variant: "capped", listed: 13, total: 13, detailed: 13, approvals: 1, second: "cgwalters-forge/tracker#2000" },
-    { variant: "grouped", listed: 60, total: 22, detailed: 2, approvals: 2, second: "cgwalters-forge/tracker#2058" },
+    { variant: "full", listed: 174, total: 174, detailed: 174, approvals: 1, second: "jmarrero-forge/tracker#2000" },
+    { variant: "capped", listed: 13, total: 13, detailed: 13, approvals: 1, second: "jmarrero-forge/tracker#2000" },
+    { variant: "grouped", listed: 60, total: 22, detailed: 2, approvals: 2, second: "jmarrero-forge/tracker#2058" },
   ] as const;
   for (const { variant, listed: inventory, total, detailed, approvals, second } of variants) it(`174 decisions: operator-path approval first, one unit per count (${variant})`, async (t) => {
     const published = needsYou174(variant);
@@ -813,7 +814,7 @@ describe("Needs you from the pass's published list", () => {
       const line = (waiting: number, done: number) => `174 decisions reported: ${inventory} listed, ${174 - inventory} not listed. ${total} rows (${detailed} with detail): ${waiting} waiting, ${done} done here, 0 hidden by the epic filter.`;
       assert.equal(app.keys()[1], second);
       const row = app.doc.querySelector<HTMLElement>(".inbox-cards > .card")!;
-      assert.equal(row.dataset.key, "cgwalters-forge/tracker#1367");
+      assert.equal(row.dataset.key, "jmarrero-forge/tracker#1367");
       assert.ok(row.classList.contains("c-approve"));
       assert.match(row.textContent!, /release 21 stale holds/);
       assert.doesNotMatch(row.textContent!, /cap|Detail not published/);
@@ -849,13 +850,13 @@ describe("Needs you from the pass's published list", () => {
     const app = await boot(t, holds);
     const old = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
     Object.defineProperty(globalThis, "localStorage", { configurable: true, value: app.window.localStorage });
-    const stored = () => app.window.localStorage.getItem("review.inbox.epic.cgwalters");
+    const stored = () => app.window.localStorage.getItem("review.inbox.epic.jmarrero");
     try {
       const chips = () => [...app.doc.querySelectorAll<HTMLButtonElement>(".epic-chips button")];
       const pressed = () => chips().find((b) => b.getAttribute("aria-pressed") === "true")!.getAttribute("data-epic-choice");
       const line = () => app.doc.querySelector("#sec-needs")!.textContent!;
       assert.equal(app.count(), "6", "the heading counts what the default filter shows");
-      assert.equal(app.keys().filter((k) => !app.doc.querySelector<HTMLElement>(`[data-key="${k}"]`)!.hidden)[0], "cgwalters-forge/tracker#1261");
+      assert.equal(app.keys().filter((k) => !app.doc.querySelector<HTMLElement>(`[data-key="${k}"]`)!.hidden)[0], "jmarrero-forge/tracker#1261");
       assert.match(app.doc.querySelector(".epic-filter")!.textContent!, /2 epics in progress: tracker#976 \(focus, the operator's comment this week\), tracker#1100/);
       assert.match(line(), /8 decisions reported: 8 listed, 0 not listed\. 8 rows \(7 with detail\): 6 waiting, 0 done here, 2 hidden by the epic filter\./);
       assert.deepEqual(app.reads.all.filter((r) => r.path !== HOLDS && r.path !== "/user").map((r) => r.path), [SEARCH], "the filter reads nothing; the incomplete list reads needs-human once");
@@ -864,7 +865,7 @@ describe("Needs you from the pass's published list", () => {
       assert.match(line(), /8 rows \(7 with detail\): 8 waiting, 0 done here, 0 hidden by the epic filter\./);
       app.window.location.hash = "#epic-1100";
       await app.until(() => app.count() === "2", "the #epic-N deep link");
-      assert.equal(pressed(), "epic:cgwalters-forge/tracker#1100");
+      assert.equal(pressed(), "epic:jmarrero-forge/tracker#1100");
       assert.equal(stored(), '"all"', "a link selects its epic for this visit, not the viewer's default");
       // Past the cap, fit() has cut every detail card first: the two numbers stay apart.
       holds.comments = [holdsComment(iso(T0), { ...published, complete: false, items: [], requests: undefined, omitted: 2, count: 10, counts: { decisions: 10, groups: 0, members: 10 }, details_omitted: 10 })];
@@ -885,11 +886,11 @@ describe("Needs you from the pass's published list", () => {
   it("661 publication with a promote group: compact cards, a quiet placeholder and members in the pass's order", async (t) => {
     const published = { ...fixture<Record<string, unknown> & { items: unknown[]; identities: unknown[]; requests: Record<string, unknown>[] }>("needs-you-661.json"), validated_at: iso(T0), changed_at: iso(T0) };
     const bucketed = fixture<{ group: { reason: string; numbers: number[] }; review_buckets: unknown }>("draft-review-needs-you.json");
-    const group = "cgwalters-forge/bootc#1";
-    const groupRequest = { ...published.requests.find((r) => r.key === "cgwalters-forge/tracker#1261")!, key: group, identity: `github.com/${group}/promote`, question: "3 drafts", target: { type: "pull_request", repository: "cgwalters-forge/bootc", number: 1 } };
+    const group = "jmarrero-forge/bootc#1";
+    const groupRequest = { ...published.requests.find((r) => r.key === "jmarrero-forge/tracker#1261")!, key: group, identity: `github.com/${group}/promote`, question: "3 drafts", target: { type: "pull_request", repository: "jmarrero-forge/bootc", number: 1 } };
     const app = await boot(t, { status: 200, etag: '"a"', comments: [holdsComment(iso(T0), {
       ...published, review_buckets: bucketed.review_buckets, count: 9, counts: { decisions: 9, groups: 1, members: 11 },
-      items: [...published.items, rawAsk(1, { key: group, item: group, source: "reviews", kind: "review-promote", ask: "3 drafts", action: { type: "pull_request", repository: "cgwalters-forge/bootc", number: 1 }, group: bucketed.group, epic: FOCUS, topEpic: FOCUS })],
+      items: [...published.items, rawAsk(1, { key: group, item: group, source: "reviews", kind: "review-promote", ask: "3 drafts", action: { type: "pull_request", repository: "jmarrero-forge/bootc", number: 1 }, group: bucketed.group, epic: FOCUS, topEpic: FOCUS })],
       identities: [...published.identities, { item: group, kind: "review-promote", source: "reviews", waiting_since: "2026-11-04T19:00:00Z", epic: FOCUS }],
       requests: [...published.requests, groupRequest],
     })] });
@@ -897,22 +898,22 @@ describe("Needs you from the pass's published list", () => {
       const cards = [...app.doc.querySelectorAll<HTMLElement>(".inbox-cards > .card:not([hidden])")];
       const card = (key: string) => cards.find((c) => c.dataset.key === key)!;
       assert.equal(app.count(), "7");
-      assert.deepEqual(cards.map((c) => c.dataset.key), ["cgwalters-forge/tracker#1261", "cgwalters-forge/agentic-job#2900", "cgwalters-forge/tracker#1300", "cgwalters-forge/tracker#1310", "cgwalters-forge/agent-board#650"]);
+      assert.deepEqual(cards.map((c) => c.dataset.key), ["jmarrero-forge/tracker#1261", "jmarrero-forge/agentic-job#2900", "jmarrero-forge/tracker#1300", "jmarrero-forge/tracker#1310", "jmarrero-forge/agent-board#650"]);
       assert.match(app.doc.querySelector("#sec-needs")!.textContent!, /9 decisions reported: 9 listed, 0 not listed\. 9 rows \(8 with detail\): 7 waiting, 0 done here, 2 hidden by the epic filter\. Groups: 1, members: 11\./);
       for (const c of cards) {
         // #237 added a "Published decision context" fold beside Context on every card.
         assert.deepEqual([...c.querySelectorAll(":scope > details:not(.card-full, .not-offered) > summary")].map((s) => s.textContent), c.querySelector(":scope > .card-note") ? ["Context"] : [], c.dataset.key);
       }
-      assert.match(card("cgwalters-forge/tracker#1261").querySelector(".card-note")!.textContent!, /ownership_evidence/, "the published context is still one click away");
+      assert.match(card("jmarrero-forge/tracker#1261").querySelector(".card-note")!.textContent!, /ownership_evidence/, "the published context is still one click away");
       // #237 drew a detail-less identity as an Answer with a refusal box.
       app.doc.querySelector<HTMLButtonElement>(".inbox-more")!.click();
-      const placeholder = app.doc.querySelector('[data-key="cgwalters-forge/tracker#1310"]')!;
+      const placeholder = app.doc.querySelector('[data-key="jmarrero-forge/tracker#1310"]')!;
       assert.deepEqual([placeholder.querySelector(".kind")!.textContent, placeholder.querySelector(".title")!.textContent], ["Act", "Detail not published: inspect the source before acting"]);
       assert.equal(placeholder.querySelector(".warn, button, a[href], details"), null);
       // #242 drew nav buttons and bucket headings on the group before any read.
       const members = app.doc.querySelector(`[data-key="${group}"] .members`)!;
       assert.equal(members.querySelector("nav, h4, button"), null);
-      assert.deepEqual([...members.querySelectorAll<HTMLElement>(".member")].map((d) => d.dataset.member), [1, 2, 3].map((n) => `cgwalters-forge/bootc#${n}`));
+      assert.deepEqual([...members.querySelectorAll<HTMLElement>(".member")].map((d) => d.dataset.member), [1, 2, 3].map((n) => `jmarrero-forge/bootc#${n}`));
       assert.deepEqual(app.reads.all.map((r) => r.path), ["/user", HOLDS, SEARCH], "drawing reads nothing else; the incomplete list reads needs-human directly");
     } finally { await app.close(); }
   });
@@ -921,10 +922,10 @@ describe("Needs you from the pass's published list", () => {
     const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0, [rawAsk(1, { epic: FOCUS, topEpic: FOCUS })], { epics }) };
     const app = await boot(t, holds);
     try {
-      holds.comments = [holdsComment(iso(T0), undefined, [{ item: "cgwalters-forge/tracker#2", url: "https://github.com/cgwalters-forge/tracker/issues/2", epic: false, kind: "needs-human", reason: "Choose", operator: true, priority: "P0", question: "Which path?" }])];
+      holds.comments = [holdsComment(iso(T0), undefined, [{ item: "jmarrero-forge/tracker#2", url: "https://github.com/jmarrero-forge/tracker/issues/2", epic: false, kind: "needs-human", reason: "Choose", operator: true, priority: "P0", question: "Which path?" }])];
       holds.etag = '"b"';
       await app.wake(2 * MINUTE);
-      const fallback = app.doc.querySelector<HTMLElement>('[data-key="cgwalters-forge/tracker#2"]')!;
+      const fallback = app.doc.querySelector<HTMLElement>('[data-key="jmarrero-forge/tracker#2"]')!;
       assert.ok(fallback);
       assert.equal(fallback.hidden, false);
       assert.equal(app.doc.querySelector(".epic-filter"), null, "no browser ranking or hidden fallback holds");
@@ -944,7 +945,7 @@ describe("Needs you from the pass's published list", () => {
     app.doc.querySelector<HTMLButtonElement>("#signout")!.click();
     release();
     await settle();
-    assert.equal(app.doc.querySelector('[data-key="cgwalters-forge/tracker#7"]'), null);
+    assert.equal(app.doc.querySelector('[data-key="jmarrero-forge/tracker#7"]'), null);
     app.window.close();
   });
 });
@@ -954,7 +955,7 @@ describe("serverless", () => {
     const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0 - 3 * 60 * MINUTE, [rawAsk(1)]) };
     const app = await boot(t, holds);
     try {
-      assert.deepEqual(app.keys(), ["cgwalters-forge/tracker#1"]);
+      assert.deepEqual(app.keys(), ["jmarrero-forge/tracker#1"]);
       app.window.location.hash = "#status";
       await app.until(() => /Pass view not in the pass's snapshot/.test(app.doc.querySelector("#view")!.textContent!), "Status");
       assert.match(app.doc.querySelector("#view")!.textContent!, /written 3h ago: the pass may have stopped publishing it/);
@@ -966,12 +967,12 @@ describe("serverless", () => {
     const holds: Holds = { status: 200, etag: '"a"', comments: listed(T0, [rawAsk(1)]), expired: true };
     const app = await boot(t, holds);
     try {
-      app.window.location.hash = "#issue/cgwalters-forge/tracker/5";
+      app.window.location.hash = "#issue/jmarrero-forge/tracker/5";
       await app.until(() => !!app.doc.querySelector("form.item-dispatch"), "the dispatch form");
       app.doc.querySelector<HTMLTextAreaElement>("form.item-dispatch textarea")!.value = "Look into it";
       app.doc.querySelector("form.item-dispatch")!.dispatchEvent(new app.window.Event("submit", { cancelable: true }));
       await app.until(() => !!app.doc.querySelector(".signin"), "the sign-in form");
-      assert.deepEqual(app.reads.writes, ["POST /repos/cgwalters-forge/tracker/issues/5/comments"]);
+      assert.deepEqual(app.reads.writes, ["POST /repos/jmarrero-forge/tracker/issues/5/comments"]);
       assert.match(app.doc.querySelector(".signin")!.textContent!, /GitHub rejected the saved token: it has expired or was revoked\. Paste a new one\./);
     } finally { app.window.close(); }
   });

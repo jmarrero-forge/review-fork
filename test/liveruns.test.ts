@@ -16,9 +16,9 @@ const raw = (repository: string, id: number, title: string, status = "in_progres
 
 describe("parseRunName", () => {
   const cases: [string, ReturnType<typeof parseRunName>][] = [
-    ["implement cgwalters-forge/agent-board#733 (claude)", { kind: "implement", item: "cgwalters-forge/agent-board#733", pool: "claude" }],
-    ["implement bootc-dev/cgwalters-devspace-sandbox#42 (openai, 4c)", { kind: "implement", item: "bootc-dev/cgwalters-devspace-sandbox#42", pool: "openai" }],
-    ["review cgwalters-forge/review#280 0123456789abcdef0123456789abcdef01234567 (claude)", { kind: "review", item: "cgwalters-forge/review#280", pool: "claude" }],
+    ["implement jmarrero-forge/agent-board#733 (claude)", { kind: "implement", item: "jmarrero-forge/agent-board#733", pool: "claude" }],
+    ["implement bootc-dev/jmarrero-devspace-sandbox#42 (openai, 4c)", { kind: "implement", item: "bootc-dev/jmarrero-devspace-sandbox#42", pool: "openai" }],
+    ["review jmarrero-forge/review#280 0123456789abcdef0123456789abcdef01234567 (claude)", { kind: "review", item: "jmarrero-forge/review#280", pool: "claude" }],
     ["fix o/r#3 (openai) [acp-experiment]", { kind: "fix", item: "o/r#3", pool: "openai" }],
     ["triage o/r#9", { kind: "triage", item: "o/r#9", pool: null }],
     ["supervisor", undefined],
@@ -180,14 +180,14 @@ describe("cancelLiveRun", () => {
         : method === "POST" && url.endsWith("/cancel") ? { status: 202, body: {} } : undefined);
 
   it("reads the viewer and the run fresh, then cancels it", async () => {
-    const { fetchImpl, calls } = gitHub("cgwalters", raw(TRACKER.repository, 2, "implement o/r#2 (claude)"));
+    const { fetchImpl, calls } = gitHub("jmarrero", raw(TRACKER.repository, 2, "implement o/r#2 (claude)"));
     assert.equal(await cancelLiveRun(new GitHub(token, fetchImpl), target), `https://github.com/${TRACKER.repository}/actions/runs/2`);
     assert.deepEqual(calls.map((c) => `${c.method} ${c.url.replace(API, "")}`), ["GET /user", `GET /repos/${TRACKER.repository}/actions/runs/2`, `POST /repos/${TRACKER.repository}/actions/runs/2/cancel`]);
   });
 
   for (const [name, answer] of [["a 5xx", { status: 502, body: { message: "Bad Gateway" } }], ["a lost answer", "throw"]] as const) it(`calls a cancel answered by ${name} uncertain`, async () => {
     const { fetchImpl } = scriptedFetch((method, url) => {
-      if (url === `${API}/user`) return { body: { login: "cgwalters" }, headers: { "x-oauth-scopes": "repo" } };
+      if (url === `${API}/user`) return { body: { login: "jmarrero" }, headers: { "x-oauth-scopes": "repo" } };
       if (method === "GET") return { body: raw(TRACKER.repository, 2, "") };
       if (answer === "throw") throw new TypeError("network error");
       return answer;
@@ -196,11 +196,11 @@ describe("cancelLiveRun", () => {
   });
 
   const refusals: [string, string, Record<string, unknown>, LiveRun, RegExp][] = [
-    ["another viewer", "visitor", raw(TRACKER.repository, 2, ""), target, /only cgwalters acts/],
-    ["a finished run", "cgwalters", raw(TRACKER.repository, 2, "", "completed"), target, /already finished/],
-    ["another workflow's run", "cgwalters", { ...raw(TRACKER.repository, 2, ""), path: ".github/workflows/poll.yml" }, target, /poll\.yml, not dispatch\.yml/],
-    ["another run", "cgwalters", raw(TRACKER.repository, 3, ""), target, /different run/],
-    ["a source not configured", "cgwalters", raw("o/r", 2, ""), { ...target, source: { repository: "o/r", workflow: "x.yml" }, run: { repository: "o/r", id: 2 } }, /not a run of an agent workflow/],
+    ["another viewer", "visitor", raw(TRACKER.repository, 2, ""), target, /only jmarrero acts/],
+    ["a finished run", "jmarrero", raw(TRACKER.repository, 2, "", "completed"), target, /already finished/],
+    ["another workflow's run", "jmarrero", { ...raw(TRACKER.repository, 2, ""), path: ".github/workflows/poll.yml" }, target, /poll\.yml, not dispatch\.yml/],
+    ["another run", "jmarrero", raw(TRACKER.repository, 3, ""), target, /different run/],
+    ["a source not configured", "jmarrero", raw("o/r", 2, ""), { ...target, source: { repository: "o/r", workflow: "x.yml" }, run: { repository: "o/r", id: 2 } }, /not a run of an agent workflow/],
   ];
   for (const [name, login, got, r, why] of refusals) it(`refuses ${name}`, async () => {
     const { fetchImpl, calls } = gitHub(login, got);

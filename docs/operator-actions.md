@@ -12,10 +12,13 @@ empty to refuse those kinds of actions. No dispatcher or proposal can widen this
 configuration. The allowlist should start with the forge-native repositories;
 upstreams require an operator-reviewed configuration change.
 
-The shipped allowlist explicitly includes `cgwalters-bot/praxis-credential-broker`
-alongside the forge repositories. The app does not read tracker's pass config;
-its existing bot-PR search is already repository-independent, so broker PRs
-requesting the operator's review don't need an extra search or repository list.
+The shipped allowlist is jmarrero's harness: jmarrero-forge/actions,
+jmarrero-forge/agenthome, jmarrero-forge/tracker and jmarrero/review. It leaves
+out jmarrero/atomic-setup, which holds the broker policy but also his desktop
+image and bot host, so no proposal can act there. The app does not read
+tracker's pass config; its existing bot-PR search is already
+repository-independent, so broker PRs requesting the operator's review still
+appear without an extra search or repository list.
 
 This prevents a proposal from borrowing the viewer's token to write outside
 the approved repositories or project. Only the configured operator can execute, using

@@ -4,7 +4,7 @@
   "at": "2026-10-30T12:00:00Z",
   "truncated": 0,
   "holds": [
-    {"item":"cgwalters-forge/agent-board#727","url":"https://github.com/cgwalters-forge/agent-board/issues/727","epic":false,"kind":"in-flight","reason":"Waiting on agent-board#732","operator":false,"priority":"P0","question":null}
+    {"item":"jmarrero-forge/agent-board#727","url":"https://github.com/jmarrero-forge/agent-board/issues/727","epic":false,"kind":"in-flight","reason":"Waiting on agent-board#732","operator":false,"priority":"P0","question":null}
   ],
   "needs_you": {
     "schema":"agent-board/needs-you/v2",
@@ -17,12 +17,12 @@
     "count":2,
     "counts":{"decisions":2,"groups":0,"members":2},
     "identities":[
-      {"key":"cgwalters-forge/agent-board#727","item":"cgwalters-forge/agent-board#727","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z"},
-      {"key":"cgwalters-forge/agent-board#728","item":"cgwalters-forge/agent-board#728","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z"}
+      {"key":"jmarrero-forge/agent-board#727","item":"jmarrero-forge/agent-board#727","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z"},
+      {"key":"jmarrero-forge/agent-board#728","item":"jmarrero-forge/agent-board#728","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z"}
     ],
     "items":[
-      {"key":"cgwalters-forge/agent-board#727","item":"cgwalters-forge/agent-board#727","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z","ask":"Resume assignment migration?","recommendation":null,"action":{"type":"issue","repository":"cgwalters-forge/agent-board","number":727},"carried":true},
-      {"key":"cgwalters-forge/agent-board#728","item":"cgwalters-forge/agent-board#728","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z","ask":"Resume mechanical follow-through?","recommendation":null,"action":{"type":"issue","repository":"cgwalters-forge/agent-board","number":728},"carried":true}
+      {"key":"jmarrero-forge/agent-board#727","item":"jmarrero-forge/agent-board#727","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z","ask":"Resume assignment migration?","recommendation":null,"action":{"type":"issue","repository":"jmarrero-forge/agent-board","number":727},"carried":true},
+      {"key":"jmarrero-forge/agent-board#728","item":"jmarrero-forge/agent-board#728","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T12:00:00Z","ask":"Resume mechanical follow-through?","recommendation":null,"action":{"type":"issue","repository":"jmarrero-forge/agent-board","number":728},"carried":true}
     ]
   }
 }

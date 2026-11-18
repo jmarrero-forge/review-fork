@@ -21,8 +21,8 @@ pub const SCHEMA_ALIASES: &[&str] = &["control-app/v1"];
 /// Where runs come from: every workflow of the tracker (passes and the jobs
 /// they dispatch), and the devspace agent runs (bin/bot-runs in homegit).
 pub const RUN_SOURCES: &[(&str, Option<&str>)] = &[
-    ("cgwalters-forge/tracker", None),
-    ("bootc-dev/cgwalters-devspace-sandbox", Some("agent.yml")),
+    ("jmarrero-forge/tracker", None),
+    ("bootc-dev/jmarrero-devspace-sandbox", Some("agent.yml")),
 ];
 
 /// The run statuses that mean not finished, each its own list query.
@@ -41,13 +41,13 @@ const CONCURRENCY: usize = 4;
 const WAITING_QUERIES: &[(&str, &str)] = &[
     (
         "review-requested",
-        "is:open archived:false user-review-requested:cgwalters",
+        "is:open archived:false user-review-requested:jmarrero",
     ),
-    ("assigned", "is:open archived:false assignee:cgwalters"),
+    ("assigned", "is:open archived:false assignee:jmarrero"),
 ];
 
 /// The bot's (BOT_LOGIN's) open PRs anywhere, as the app's OTHER_QUERY.
-const BOT_PRS_QUERY: &str = "is:pr is:open archived:false author:cgwalters-bot";
+const BOT_PRS_QUERY: &str = "is:pr is:open archived:false author:jmarrero-bot";
 
 /// One part of the state, as last read.
 #[derive(Clone, Debug, Serialize)]
@@ -709,7 +709,7 @@ pub(crate) mod tests {
         let error = second.waiting.error.unwrap();
         assert!(
             error.starts_with(
-                "GET /search/issues?q=is:open archived:false user-review-requested:cgwalters"
+                "GET /search/issues?q=is:open archived:false user-review-requested:jmarrero"
             ),
             "{error}"
         );
@@ -738,7 +738,7 @@ pub(crate) mod tests {
                 "bootc-dev/bootc#1201: merge state: GET /repos/bootc-dev/bootc/pulls/1201: HTTP 404: Not Found"
             )
         );
-        src.0.remove("/repos/cgwalters-forge/bootc/pulls/16");
+        src.0.remove("/repos/jmarrero-forge/bootc/pulls/16");
         let state = refresh(&src, &State::empty(), NOW).await;
         assert!(
             state.prs.error.unwrap().ends_with("Not Found (and 1 more)"),
@@ -748,7 +748,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn unreadable_run_source_keeps_the_others() {
-        const DEVSPACE: &str = "/repos/bootc-dev/cgwalters-devspace-sandbox/";
+        const DEVSPACE: &str = "/repos/bootc-dev/jmarrero-devspace-sandbox/";
         let mut src = Recorded::fixture();
         src.0.retain(|k, _| !k.starts_with(DEVSPACE));
         let state = refresh(&src, &State::empty(), NOW).await;
@@ -761,7 +761,7 @@ pub(crate) mod tests {
         let error = state.runs.error.unwrap();
         assert!(
             error.starts_with(&format!(
-                "bootc-dev/cgwalters-devspace-sandbox: GET {DEVSPACE}actions/workflows/agent.yml/runs?status=requested"
+                "bootc-dev/jmarrero-devspace-sandbox: GET {DEVSPACE}actions/workflows/agent.yml/runs?status=requested"
             )) && error.ends_with("HTTP 404: Not Found"),
             "one failure for the source, naming it: {error}"
         );
@@ -794,7 +794,7 @@ pub(crate) mod tests {
             [1188]
         );
         assert!(board.runs.items.is_empty());
-        let tracker = state.repo("cgwalters-forge/tracker");
+        let tracker = state.repo("jmarrero-forge/tracker");
         assert_eq!(tracker.runs.items.len(), 2);
         assert!(state.repo("nobody/nothing").prs.items.is_empty());
     }

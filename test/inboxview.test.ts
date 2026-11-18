@@ -101,7 +101,7 @@ describe("fillInbox", () => {
     const raw = realNeedsYouSnapshot();
     Object.assign(raw.needs_you.items[0]!, {
       target: "https://untrusted.invalid/", carried,
-      action: { type: "approve_pull_request", repository: "cgwalters-forge/agentic-job", number: 2110, head: "a".repeat(40) },
+      action: { type: "approve_pull_request", repository: "jmarrero-forge/agentic-job", number: 2110, head: "a".repeat(40) },
       kind: "digest-approve", group: { reason: "Constructed drafts", numbers },
     });
     const l = parseNeedsYou(raw.needs_you);
@@ -119,11 +119,11 @@ describe("fillInbox", () => {
       chatItem: () => ({ ref: REAL_NEEDS_YOU_KEYS[0]!, title: "Constructed group" }),
     });
     const card = list.firstElementChild!;
-    assert.deepEqual([...card.querySelectorAll(".member summary a")].map((a) => a.getAttribute("href")), numbers.map((n) => `#pr/cgwalters-forge/agentic-job/${n}`));
+    assert.deepEqual([...card.querySelectorAll(".member summary a")].map((a) => a.getAttribute("href")), numbers.map((n) => `#pr/jmarrero-forge/agentic-job/${n}`));
     assert.equal(card.querySelector("form, .primary, .c-answer, .c-approve, [href*='untrusted']"), null);
     assert.match(card.textContent!, /Inspect each member; no group writes/);
     if (carried) assert.match(card.textContent!, /Carried over/);
-    assert.ok(card.querySelector(".item-chat"), "retain chat, not an answer control");
+    if (CHAT_CONFIG) assert.ok(card.querySelector(".item-chat"), "retain chat, not an answer control");
     assert.deepEqual(reads, REAL_NEEDS_YOU_KEYS.slice(1, INBOX_PAGE), "only ordinary asks read an answer target");
     assert.equal(writes, 0);
   });
@@ -141,7 +141,7 @@ describe("fillInbox", () => {
     form.querySelector("textarea")!.value = "Unsent";
     let submits = 0;
     form.addEventListener("submit", () => { submits++; });
-    Object.assign(raw.needs_you.items[0]!, { action: { type: "pull_request", repository: "cgwalters-forge/agentic-job", number: 2110 }, group: { reason: "Constructed group", numbers: malformed ? [2110, 0] : [2110, 2111] } });
+    Object.assign(raw.needs_you.items[0]!, { action: { type: "pull_request", repository: "jmarrero-forge/agentic-job", number: 2110 }, group: { reason: "Constructed group", numbers: malformed ? [2110, 0] : [2110, 2111] } });
     const l = parseNeedsYou(raw.needs_you);
     assert.ok(typeof l === "object");
     assert.equal(l.refused, malformed ? 1 : 0);
@@ -157,7 +157,7 @@ describe("fillInbox", () => {
     } else {
       assert.notEqual(list.firstElementChild, card, "valid membership replaces the old representative form");
       assert.equal(list.firstElementChild!.querySelector("form, textarea"), null);
-      assert.deepEqual([...list.firstElementChild!.querySelectorAll(".member summary a")].map((a) => a.getAttribute("href")), ["#pr/cgwalters-forge/agentic-job/2110", "#pr/cgwalters-forge/agentic-job/2111"]);
+      assert.deepEqual([...list.firstElementChild!.querySelectorAll(".member summary a")].map((a) => a.getAttribute("href")), ["#pr/jmarrero-forge/agentic-job/2110", "#pr/jmarrero-forge/agentic-job/2111"]);
     }
   });
 
@@ -253,20 +253,20 @@ describe("fillInbox", () => {
   it("draws three proposals the pass lists on one issue as separate cards with title, why and Run", async () => {
     const config = ACTION_CONFIG;
     assert.ok(config);
-    const comments = [1, 2, 3].map((n) => ({ id: `IC_${n}`, databaseId: n, updatedAt: "2026-10-29T12:00:00Z", author: { login: "cgwalters-bot" }, editor: null, lastEditedAt: null,
-      body: `\`\`\`agent-board-action\n${JSON.stringify({ schema: "agent-board/operator-action/v1", title: `Decision ${n}`, why: `Reason ${n}`, actions: [{ type: "add_label", repo: "cgwalters-forge/tracker", number: 1013, label: `choice-${n}` }] })}\n\`\`\`` }));
+    const comments = [1, 2, 3].map((n) => ({ id: `IC_${n}`, databaseId: n, updatedAt: "2026-10-29T12:00:00Z", author: { login: "jmarrero-bot" }, editor: null, lastEditedAt: null,
+      body: `\`\`\`agent-board-action\n${JSON.stringify({ schema: "agent-board/operator-action/v1", title: `Decision ${n}`, why: `Reason ${n}`, actions: [{ type: "add_label", repo: "jmarrero-forge/tracker", number: 1013, label: `choice-${n}` }] })}\n\`\`\`` }));
     const gh = new GitHub(async () => "t", async (url) => {
       if (url.endsWith("/graphql")) return Response.json({ data: { repository: { issue: { state: "OPEN", comments: { nodes: comments, pageInfo: { hasNextPage: false } } } } } });
       if (url.endsWith("/issues/1013")) return Response.json({ title: "Epic decisions", state: "open", labels: [] });
       throw new Error(`Unexpected read: ${url}`);
     });
-    const proposal = (n: number) => rawAsk(1013, { key: `cgwalters-forge/tracker#1013/comment-${n}`, source: "proposals", kind: "operator-action", ask: `Decision ${n}`, action: { type: "operator_action", repository: "cgwalters-forge/tracker", number: 1013, comment: n } });
+    const proposal = (n: number) => rawAsk(1013, { key: `jmarrero-forge/tracker#1013/comment-${n}`, source: "proposals", kind: "operator-action", ask: `Decision ${n}`, action: { type: "operator_action", repository: "jmarrero-forge/tracker", number: 1013, comment: n } });
     const list = document.createElement("div");
     // As main.ts's offerBody: each card reads its own proposal again.
     fillInbox(list, publishedCards(asks(proposal(1), proposal(2), proposal(3))), { ...hooks, offerBody: async (a) => proposalCard(gh, config, await loadOffer(gh, config, a.action), () => false, () => {}) });
     await new Promise((resolve) => setTimeout(resolve, 20));
     for (const n of [1, 2, 3]) {
-      const card = cardOf(list, `cgwalters-forge/tracker#1013/comment-${n}`)!;
+      const card = cardOf(list, `jmarrero-forge/tracker#1013/comment-${n}`)!;
       assert.match(card.textContent!, new RegExp(`Reason ${n}`));
       const run = [...card.querySelectorAll("button")].filter((b) => b.textContent === "Run as yourself");
       assert.equal(run.length, 1);
@@ -323,10 +323,10 @@ describe("fillInbox", () => {
     const q = question();
     assert.equal(fillInbox(list, [q, question(2)], hooks), 2);
     await settle();
-    const card = cardOf(list, "cgwalters-forge/tracker#1")!;
+    const card = cardOf(list, "jmarrero-forge/tracker#1")!;
     card.querySelector("textarea")!.value = "Left, because";
     assert.equal(fillInbox(list, [{ ...q, title: "Which way now?" }, question(2)], hooks), 2);
-    assert.equal(cardOf(list, "cgwalters-forge/tracker#1"), card);
+    assert.equal(cardOf(list, "jmarrero-forge/tracker#1"), card);
     assert.equal(card.querySelector("textarea")!.value, "Left, because");
     // The pass dropped it: retain his text, not the outstanding decision.
     assert.equal(fillInbox(list, [question(2)], hooks), 1);
@@ -337,7 +337,7 @@ describe("fillInbox", () => {
   it("marks a card from a list that can't be read now", () => {
     const list = document.createElement("div");
     fillInbox(list, publishedCards(asks(rawAsk(1)), true), hooks);
-    const card = cardOf(list, "cgwalters-forge/tracker#1")!;
+    const card = cardOf(list, "jmarrero-forge/tracker#1")!;
     assert.ok(card.classList.contains(CARD_UNAVAILABLE_CLASS));
     assert.match(card.textContent!, /Unavailable: from the last list read/);
   });
@@ -401,7 +401,7 @@ describe("fillInbox", () => {
       read.push(a.action.comment!);
       return document.createElement("section");
     };
-    const raw = Array.from({ length: INBOX_PAGE + 2 }, (_, i) => rawAsk(9, { key: `cgwalters-forge/tracker#9/comment-${i + 1}`, kind: "operator-action", action: { type: "operator_action", repository: "cgwalters-forge/tracker", number: 9, comment: i + 1 } }));
+    const raw = Array.from({ length: INBOX_PAGE + 2 }, (_, i) => rawAsk(9, { key: `jmarrero-forge/tracker#9/comment-${i + 1}`, kind: "operator-action", action: { type: "operator_action", repository: "jmarrero-forge/tracker", number: 9, comment: i + 1 } }));
     const box = document.createElement("div");
     const list = document.createElement("div");
     box.append(list);

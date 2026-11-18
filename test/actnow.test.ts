@@ -13,7 +13,7 @@ const win = installDom();
 const render = createRenderer(win as unknown as Parameters<typeof createRenderer>[0]);
 const AT = "2026-11-06T12:00:00Z";
 const NOW = Date.parse(AT);
-const key = (n: number) => `cgwalters-forge/tracker#${n}`;
+const key = (n: number) => `jmarrero-forge/tracker#${n}`;
 const candidate = (n: number, unblocks = 1) => ({ key: key(n), unblocks });
 
 /** Synthetic records use the shipped producer shape; real replay is below. */
@@ -48,7 +48,7 @@ describe("Act now publication", () => {
 
   for (const type of ["issue", "pull_request", "approve_pull_request", "review_pull_request", "reply_pull_request", "close_pull_request", "operator_action"]) {
     it(`explains why ${type} has no checked shortcut`, () => {
-      const action = { type, repository: "cgwalters-forge/tracker", number: 1, head: "a".repeat(40), comment: 123 };
+      const action = { type, repository: "jmarrero-forge/tracker", number: 1, head: "a".repeat(40), comment: 123 };
       const p = published([rawAsk(1, { action })]);
       const slot = document.createElement("section");
       fillActNow(slot, actNowRows(p, NOW), hooks);
@@ -59,7 +59,7 @@ describe("Act now publication", () => {
 
   it("confirms and shares a SHA-bound merge receipt without duplicate writes", async () => {
     const head = "a".repeat(40);
-    const p = published([rawAsk(1, { action: { type: "pull_request", repository: "cgwalters-forge/tracker", number: 1, head } })]);
+    const p = published([rawAsk(1, { action: { type: "pull_request", repository: "jmarrero-forge/tracker", number: 1, head } })]);
     p.asks[0]!.requests = [{ forge: "github.com", quality: "decision", actions: [{ kind: "merge-or-enqueue", supported: true, reason: "checked" }] }];
     let calls = 0;
     let finish!: () => void;
@@ -69,7 +69,7 @@ describe("Act now publication", () => {
       assert.equal(sha, head);
       calls++;
       await gate;
-      return { state: "enqueued" as const, url: "https://github.com/cgwalters-forge/tracker/pull/1" };
+      return { state: "enqueued" as const, url: "https://github.com/jmarrero-forge/tracker/pull/1" };
     } };
     const slot = document.createElement("section");
     const paint = () => fillActNow(slot, actNowRows(p, NOW), shared);
@@ -113,14 +113,14 @@ describe("Act now publication", () => {
   });
 
   it("renders a published group once with its exact member count and a typed link on every row", () => {
-    const p = published([rawAsk(1, { ask: "Approve the three named PRs", action: { type: "pull_request", repository: "cgwalters-forge/tracker", number: 1 }, group: { reason: "verdict holds", numbers: [1, 2, 3] } }), rawAsk(4, { ask: "Choose A or B <script>bad()</script>" })], [candidate(1, 63), candidate(4)]);
+    const p = published([rawAsk(1, { ask: "Approve the three named PRs", action: { type: "pull_request", repository: "jmarrero-forge/tracker", number: 1 }, group: { reason: "verdict holds", numbers: [1, 2, 3] } }), rawAsk(4, { ask: "Choose A or B <script>bad()</script>" })], [candidate(1, 63), candidate(4)]);
     const home = homeSkeleton({ toggled: () => {} });
     fillActNow(home.slots.actNow, actNowRows(p, NOW), hooks);
     assert.equal(home.slots.actNow.hidden, false);
     const rows = [...home.slots.actNow.querySelectorAll("li")];
     assert.equal(rows.length, 2);
     assert.match(rows[0]!.textContent!, /3 PRs: verdict holds · unblocks 63/);
-    assert.deepEqual(rows.map((r) => r.querySelector("a")?.href), ["https://github.com/cgwalters-forge/tracker/pull/1", "https://github.com/cgwalters-forge/tracker/issues/4"]);
+    assert.deepEqual(rows.map((r) => r.querySelector("a")?.href), ["https://github.com/jmarrero-forge/tracker/pull/1", "https://github.com/jmarrero-forge/tracker/issues/4"]);
     assert.equal(home.slots.actNow.querySelector("script, button"), null, "no representative-only group writes");
     fillActNow(home.slots.actNow, [], hooks);
     assert.equal(home.slots.actNow.hidden, true);
@@ -199,12 +199,12 @@ describe("Act now publication", () => {
   it("ranks agent-board#308's decision first from an incomplete list, read-only", () => {
     // The pass read items in part, so #308 cannot be certified. Its count of
     // 12 is synthetic, not a claim about the live issue.
-    const board = "cgwalters-forge/agent-board";
+    const board = "jmarrero-forge/agent-board";
     const decision = rawAsk(308, { key: `${board}#308`, item: `${board}#308`, priority: "P1", target: `https://github.com/${board}/issues/308`,
       action: { type: "issue", repository: board, number: 308 }, source_ref: { type: "hold", repository: board, number: 308 }, ask: "Which promotion posture?" });
     const head = "a".repeat(40);
-    const review = rawAsk(5, { source: "reviews", kind: "review-approve", action: { type: "approve_pull_request", repository: "cgwalters-forge/tracker", number: 5, head } });
-    const pr = rawAsk(6, { action: { type: "pull_request", repository: "cgwalters-forge/tracker", number: 6, head } });
+    const review = rawAsk(5, { source: "reviews", kind: "review-approve", action: { type: "approve_pull_request", repository: "jmarrero-forge/tracker", number: 5, head } });
+    const pr = rawAsk(6, { action: { type: "pull_request", repository: "jmarrero-forge/tracker", number: 6, head } });
     const items = [review, rawAsk(1, { carried: true }), pr, decision];
     const records = [{ key: decision.key, unblocks: 12 }, { key: review.key, unblocks: 3 }];
     const sources = { epics: "complete", items: "partial", reviews: "complete", proposals: "complete", digest: "off" };
@@ -218,7 +218,7 @@ describe("Act now publication", () => {
     assert.match(slot.querySelector("p.note")!.textContent!, /list is incomplete/);
     const rendered = [...slot.querySelectorAll("li")];
     assert.deepEqual(rendered.map((li) => li.querySelector("a")!.href), [`https://github.com/${board}/issues/308`,
-      "https://github.com/cgwalters-forge/tracker/issues/1", "https://github.com/cgwalters-forge/tracker/pull/6", "https://github.com/cgwalters-forge/tracker/pull/5"]);
+      "https://github.com/jmarrero-forge/tracker/issues/1", "https://github.com/jmarrero-forge/tracker/pull/6", "https://github.com/jmarrero-forge/tracker/pull/5"]);
     assert.match(rendered[0]!.textContent!, /Which promotion posture\? · unblocks 12Inspect$/);
     assert.match(rendered[1]!.textContent!, /unblocks unknown · carried over; may be resolved/);
     assert.equal(rendered[2]!.querySelector("button"), null, "a needs-human PR listed directly gets no merge shortcut");
@@ -232,7 +232,7 @@ describe("Act now publication", () => {
 
   for (const fullFirst of [true, false]) it(`reuses the head-checked approval and shared receipts (${fullFirst ? "card drawn" : "card paginated"})`, async () => {
     const head = "a".repeat(40);
-    const p = published([rawAsk(1, { action: { type: "approve_pull_request", repository: "cgwalters-forge/tracker", number: 1, head }, ask: "Approve this head" })]);
+    const p = published([rawAsk(1, { action: { type: "approve_pull_request", repository: "jmarrero-forge/tracker", number: 1, head }, ask: "Approve this head" })]);
     let sent = 0;
     let finish!: () => void;
     const gate = new Promise<void>((resolve) => { finish = resolve; });
@@ -241,7 +241,7 @@ describe("Act now publication", () => {
       assert.equal(h, head);
       sent++;
       await gate;
-      return { status: "approved" as const, pr: { owner: "cgwalters-forge", repo: "tracker", number: 1 } };
+      return { status: "approved" as const, pr: { owner: "jmarrero-forge", repo: "tracker", number: 1 } };
     } };
     let full = fullFirst ? cardEl(askCard(p.asks[0]!), shared) : undefined;
     const slot = document.createElement("section");

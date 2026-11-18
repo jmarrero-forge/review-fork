@@ -17,12 +17,12 @@ export function fixture<T>(name: string): T {
 export const REAL_NEEDS_YOU_AT = "2026-11-03T17:41:35.039037224Z";
 
 export const REAL_NEEDS_YOU_KEYS = [
-  "cgwalters-forge/agentic-job#2110", "cgwalters-forge/composefs-rs#33",
-  "cgwalters-forge/agentic-job#2811", "cgwalters-forge/agent-board#308",
-  "cgwalters-forge/composefs-rs#32", "cgwalters-forge/tracker#430",
-  "cgwalters-forge/agentic-job#2026", "cgwalters-forge/tracker#12",
-  "cgwalters-forge/tracker#163", "cgwalters-forge/tracker#24",
-  "cgwalters-forge/tracker#308", "cgwalters-forge/tracker#7",
+  "jmarrero-forge/agentic-job#2110", "jmarrero-forge/composefs-rs#33",
+  "jmarrero-forge/agentic-job#2811", "jmarrero-forge/agent-board#308",
+  "jmarrero-forge/composefs-rs#32", "jmarrero-forge/tracker#430",
+  "jmarrero-forge/agentic-job#2026", "jmarrero-forge/tracker#12",
+  "jmarrero-forge/tracker#163", "jmarrero-forge/tracker#24",
+  "jmarrero-forge/tracker#308", "jmarrero-forge/tracker#7",
 ];
 
 export const realNeedsYouSnapshot = () => fixture<{
@@ -81,7 +81,7 @@ export function rawBoardItem(n: number, fields: Record<string, string>, title = 
     id: n,
     node_id: `PVTI_t${n}`,
     content_type: "Issue",
-    content: { title, html_url: `https://github.com/cgwalters-forge/tracker/issues/${n}`, state: "open" },
+    content: { title, html_url: `https://github.com/jmarrero-forge/tracker/issues/${n}`, state: "open" },
     fields: Object.entries(fields).map(([name, v], i) =>
       TEXT_FIELDS.includes(name)
         ? { id: 200 + i, name, data_type: "text", value: { raw: v } }
@@ -92,7 +92,7 @@ export function rawBoardItem(n: number, fields: Record<string, string>, title = 
 
 /** A published ask as agent-board's pass writes it (its docs/pass.md), on cgwalters-forge/tracker#n unless `over` says otherwise. */
 export function rawAsk(n: number, over: Record<string, unknown> = {}): Record<string, unknown> {
-  const repository = "cgwalters-forge/tracker";
+  const repository = "jmarrero-forge/tracker";
   return {
     key: `${repository}#${n}`, item: `${repository}#${n}`, source: "items", kind: "needs-human", priority: null, waiting_since: "2026-10-29T18:24:18Z",
     ask: `Ask ${n}?`, recommendation: null, target: `https://github.com/${repository}/issues/${n}`, head: null,
@@ -117,7 +117,7 @@ export function rawNeedsYou(items: unknown[], at: string, over: Record<string, u
 /** The bot's hold comment holding `needsYou` (left out where undefined), as the pass renders it. */
 export function holdsComment(at: string, needsYou?: unknown, holds: unknown[] = publishedTestHolds(needsYou)): { user: { login: string }; body: string } {
   const snapshot = { schema: "agent-board/holds/v1", at, truncated: 0, holds, ...(needsYou === undefined ? {} : { needs_you: needsYou }) };
-  return { user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\nHolds as of ${at}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\`\n` };
+  return { user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\nHolds as of ${at}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\`\n` };
 }
 
 /** agent-board's PART_CHARS: the base64 each comment of a compressed snapshot carries. */
@@ -136,7 +136,7 @@ export function compressedHolds(body: string, at: string, partChars = PART_CHARS
     const [marker, header, said] = i === 0
       ? ["<!-- agent-board-holds v1 -->", { schema: "agent-board/holds-parts/v1", at, encoding: "gzip+base64", parts: count }, `Holds as of ${at}, compressed across ${count} comments.`]
       : ["<!-- agent-board-holds part v1 -->", { schema: "agent-board/holds-parts/v1", at, part: i + 1 }, `Part ${i + 1} of ${count} of the holds as of ${at}.`];
-    return { user: { login: "cgwalters-bot" }, body: `${marker}\n${said}\n\n\`\`\`json\n${JSON.stringify(header)}\n\`\`\`\n\n\`\`\`text\n${piece}\n\`\`\`\n` };
+    return { user: { login: "jmarrero-bot" }, body: `${marker}\n${said}\n\n\`\`\`json\n${JSON.stringify(header)}\n\`\`\`\n\n\`\`\`text\n${piece}\n\`\`\`\n` };
   });
 }
 

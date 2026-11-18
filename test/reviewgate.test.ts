@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-// The review gate: a thin caller of agentic-job's review.yml, with this
+// The review gate: a thin caller of jmarrero-forge/actions' jmarrero-review.yml,
+// agentic-job's review.yml with jmarrero's tailnet join, and this
 // repository's copies of the bounds and the task, which that workflow reads
 // from the base branch (agentic-job's docs/review.md, "Another repository").
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -11,9 +12,6 @@ const caller = read(".github/workflows/review.yml");
 // The bounds, comments aside: comment-only outputs for this repository's
 // main, automatic events for any role (the shared workflow's `if:` narrows
 // them to owner, members and collaborators), `/review` only from writers.
-// Both may add up to ten inline findings beside the verdict (agentic-job's
-// docs/review.md, "Inline findings"): the called workflow requests those
-// outputs on every event, and policy refuses a run whose bounds are narrower.
 const bounds = (name: string) =>
   read(`workflow/${name}.toml`)
     .split("\n")
@@ -22,13 +20,12 @@ const bounds = (name: string) =>
 const common = (repos: string) => `hosts = ["github.com"]
 repos = ${repos}
 bases = ["main"]
-max_outputs = 11
+max_outputs = 1
 max_patch_bytes = 1024
 max_patch_files = 1
 [outputs]
 add_comment = { max = 1 }
 noop = { max = 1 }
-create_pull_request_review_comment = { max = 10 }
 [trigger]`;
 
 describe("review gate", () => {
@@ -44,7 +41,7 @@ describe("review gate", () => {
       .map((line) => line.replace(/ # zizmor: .*$/, ""))
       .filter((line) => line.trim() && !line.trim().startsWith("#"));
     assert.equal(
-      lines.join("\n").replace(/@v\d+\.\d+\.\d+$/m, "@TAG"),
+      lines.join("\n").replace(/@[0-9a-f]{40}$/m, "@SHA"),
       `name: review
 on:
   pull_request_target:
@@ -55,9 +52,9 @@ permissions: {}
 jobs:
   review:
     if: >-
-      github.event_name == 'pull_request_target' ||
-      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/review'))
-    uses: cgwalters-forge/agentic-job/.github/workflows/review.yml@TAG
+      vars.AGENT_REVIEW != '' && (github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/review')))
+    uses: jmarrero-forge/actions/.github/workflows/jmarrero-review.yml@SHA
     permissions:
       contents: read
       issues: read
@@ -68,18 +65,19 @@ jobs:
     );
   });
 
-  // A release tag, not a branch: the permissions above go to whatever the
-  // ref names, and a branch would move under the gate without a review here.
-  it("calls agentic-job at a release tag", () => {
+  // A full commit, not a branch or tag: the permissions above go to whatever
+  // the ref names, a branch or tag would move under the gate without a
+  // review here, and the broker admits the wrapper only at one commit.
+  it("calls jmarrero-forge's wrapper at a full commit", () => {
     const refs = [...caller.matchAll(/uses: (\S+)@(\S+)/g)];
     assert.deepEqual(
       refs.map((match) => match[1]),
-      ["cgwalters-forge/agentic-job/.github/workflows/review.yml"],
+      ["jmarrero-forge/actions/.github/workflows/jmarrero-review.yml"],
     );
-    assert.match(refs[0]?.[2] ?? "", /^v\d+\.\d+\.\d+$/);
+    assert.match(refs[0]?.[2] ?? "", /^[0-9a-f]{40}$/);
   });
 
-  it("the bounds admit one comment, and inline findings, on one repository only", () => {
+  it("the bounds admit one comment on one repository only", () => {
     const review = bounds("review");
     const command = bounds("review-command");
     const repos = /^repos = (\["[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+"\])$/m.exec(review)?.[1];
@@ -103,7 +101,7 @@ commands = ["/review"]`,
     );
   });
 
-  // agentic-job's own task at the called tag, not agent-board's: that one says
+  // agentic-job's own task, not agent-board's: that one says
   // no person approves after the review, but whether one does here is the
   // owner's merge policy (.github/agentic-job/merge.toml, `person` without
   // it), which the run appends to the task.

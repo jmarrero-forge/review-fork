@@ -9,7 +9,7 @@ const config: SessionDispatchConfig = { repo: "public/caller", workflow: "dispat
 
 function api(options: { login?: string; private?: boolean; status?: number; id?: unknown; runStatus?: string } = {}) {
   const { calls, fetchImpl } = scriptedFetch((method, url) => {
-    if (url.endsWith("/user")) return { body: { login: options.login ?? "cgwalters" } };
+    if (url.endsWith("/user")) return { body: { login: options.login ?? "jmarrero" } };
     if (method === "GET" && /\/repos\/public\/(caller|target)$/.test(url)) return { body: { private: options.private ?? false } };
     if (method === "POST" && url.endsWith("/dispatches")) return { status: options.status ?? 200, body: { workflow_run_id: options.id ?? 123 } };
     if (url.endsWith("/actions/runs/123")) return { body: { status: options.runStatus ?? "completed", conclusion: options.runStatus ? null : "success" } };
@@ -19,10 +19,12 @@ function api(options: { login?: string; private?: boolean; status?: number; id?:
 }
 
 it("dispatch mode is off by default and validates its closed caller settings", () => {
-  assert.equal(CHAT_CONFIG?.dispatch, null);
-  assert.deepEqual(parseChatConfig({ ...CHAT_CONFIG, dispatch: config })?.dispatch, config);
+  // Chat is off in jmarrero's deployment; the settings are checked against a valid chat configuration.
+  assert.equal(CHAT_CONFIG?.dispatch ?? null, null);
+  const chat = CHAT_CONFIG ?? { tailnetDomain: "example.ts.net", sources: [{ repo: "owner/repo", workflow: "session.yml", issue: 1, publisher: "publisher" }] };
+  assert.deepEqual(parseChatConfig({ ...chat, dispatch: config })?.dispatch, config);
   for (const patch of [{ runner: "[self-hosted]" }, { runner: "../secret" }, { repo: "../caller" }, { issue: 0 }, { ref: "" }]) {
-    assert.throws(() => parseChatConfig({ ...CHAT_CONFIG, dispatch: { ...config, ...patch } }));
+    assert.throws(() => parseChatConfig({ ...chat, dispatch: { ...config, ...patch } }));
   }
 });
 
@@ -109,7 +111,7 @@ it("disposal during preflight prevents a late dispatch", async () => {
   p.mount(slot); p.open({ ref: "public/target#42", title: "Item" });
   slot.querySelector("form")!.dispatchEvent(new win.Event("submit", { cancelable: true }));
   await settle();
-  p.dispose(); release(new Response(JSON.stringify({ login: "cgwalters" })));
+  p.dispose(); release(new Response(JSON.stringify({ login: "jmarrero" })));
   await settle();
   assert.equal(requests.some((url) => url.endsWith("/dispatches")), false);
 });

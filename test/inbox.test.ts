@@ -27,12 +27,12 @@ const pr = (n: number, type: string, over: Record<string, unknown> = {}) => rawA
 describe("published ask cards", () => {
   // the action type, the card's kind, its link on GitHub and in the app
   const cases: [string, Record<string, unknown>, string, string, string][] = [
-    ["a hold on an issue is answered", rawAsk(7), "answer", "https://github.com/cgwalters-forge/tracker/issues/7", "#issue/cgwalters-forge/tracker/7"],
+    ["a hold on an issue is answered", rawAsk(7), "answer", "https://github.com/jmarrero-forge/tracker/issues/7", "#issue/jmarrero-forge/tracker/7"],
     ["a PR's needs-human is answered on the PR", pr(3, "pull_request", { kind: "review-needs-human" }), "answer", "https://github.com/up/proj/pull/3", "#pr/up/proj/3"],
     ["an approval at a head is approved in place", pr(4, "approve_pull_request"), "approve", "https://github.com/up/proj/pull/4", "#pr/up/proj/4"],
-    ["a broker review wait the review job withheld is approved in place", pr(2, "approve_pull_request", { item: "cgwalters-bot/praxis-credential-broker#2", key: "cgwalters-bot/praxis-credential-broker#2", kind: "review-withheld", action: { type: "approve_pull_request", repository: "cgwalters-bot/praxis-credential-broker", number: 2, head: HEAD } }), "approve", "https://github.com/cgwalters-bot/praxis-credential-broker/pull/2", "#pr/cgwalters-bot/praxis-credential-broker/2"],
+    ["a broker review wait the review job withheld is approved in place", pr(2, "approve_pull_request", { item: "jmarrero-bot/praxis-credential-broker#2", key: "jmarrero-bot/praxis-credential-broker#2", kind: "review-withheld", action: { type: "approve_pull_request", repository: "jmarrero-bot/praxis-credential-broker", number: 2, head: HEAD } }), "approve", "https://github.com/jmarrero-bot/praxis-credential-broker/pull/2", "#pr/jmarrero-bot/praxis-credential-broker/2"],
     ["a closer look opens the PR pane", pr(9, "review_pull_request", { kind: "digest-closer", key: "up/proj#9/digest" }), "open", "https://github.com/up/proj/pull/9", "#pr/up/proj/9"],
-    ["a proposal is its own Do card, linked to its comment", rawAsk(5, { key: "cgwalters-forge/tracker#5/comment-21", source: "proposals", kind: "operator-action", action: { type: "operator_action", repository: "cgwalters-forge/tracker", number: 5, comment: 21 } }), "do", "https://github.com/cgwalters-forge/tracker/issues/5#issuecomment-21", "#issue/cgwalters-forge/tracker/5"],
+    ["a proposal is its own Do card, linked to its comment", rawAsk(5, { key: "jmarrero-forge/tracker#5/comment-21", source: "proposals", kind: "operator-action", action: { type: "operator_action", repository: "jmarrero-forge/tracker", number: 5, comment: 21 } }), "do", "https://github.com/jmarrero-forge/tracker/issues/5#issuecomment-21", "#issue/jmarrero-forge/tracker/5"],
   ];
   for (const [name, raw, kind, url, href] of cases) it(name, () => {
     const c = askCard(asks(raw)[0]!);
@@ -45,10 +45,10 @@ describe("published ask cards", () => {
   });
 
   it("keeps the pass's order and count, with each proposal its own card and the digest's approvals one group where the first ranks", () => {
-    const proposal = (comment: number) => rawAsk(5, { key: `cgwalters-forge/tracker#5/comment-${comment}`, kind: "operator-action", action: { type: "operator_action", repository: "cgwalters-forge/tracker", number: 5, comment } });
+    const proposal = (comment: number) => rawAsk(5, { key: `jmarrero-forge/tracker#5/comment-${comment}`, kind: "operator-action", action: { type: "operator_action", repository: "jmarrero-forge/tracker", number: 5, comment } });
     const digest = (n: number) => pr(n, "approve_pull_request", { key: `up/proj#${n}/digest`, kind: "digest-approve", recommendation: `Bump ${n}.` });
     const cards = publishedCards(asks(rawAsk(1), digest(7), proposal(21), proposal(22), digest(8), rawAsk(2)));
-    assert.deepEqual(cards.map((c) => c.key), ["cgwalters-forge/tracker#1", "digest", "cgwalters-forge/tracker#5/comment-21", "cgwalters-forge/tracker#5/comment-22", "cgwalters-forge/tracker#2"]);
+    assert.deepEqual(cards.map((c) => c.key), ["jmarrero-forge/tracker#1", "digest", "jmarrero-forge/tracker#5/comment-21", "jmarrero-forge/tracker#5/comment-22", "jmarrero-forge/tracker#2"]);
     const group = cards[1]!;
     assert.ok(group.kind === "digest");
     assert.deepEqual(group.items.map((i) => [i.pr.number, i.head, i.reason]), [[7, HEAD, "Bump 7."], [8, HEAD, "Bump 8."]]);
@@ -56,7 +56,7 @@ describe("published ask cards", () => {
 });
 
 function draft(over: Partial<DraftIssue> = {}, state?: string): DraftIssue & { issue: { state?: string } } {
-  return { issue: { number: 40, title: "Review draft: upstream/widget#3: Fix", html_url: "https://github.com/cgwalters-forge/tracker/issues/40", body: "", comments: 1, user: { login: "cgwalters-bot" }, ...(state ? { state } : {}) }, box: "unticked", ...over };
+  return { issue: { number: 40, title: "Review draft: upstream/widget#3: Fix", html_url: "https://github.com/jmarrero-forge/tracker/issues/40", body: "", comments: 1, user: { login: "jmarrero-bot" }, ...(state ? { state } : {}) }, box: "unticked", ...over };
 }
 
 describe("Send cards", () => {
@@ -100,7 +100,7 @@ describe("inboxCards", () => {
     const entries = parseDocument("### D2 Ask\n- [ ] A) Yes\nReply:\n\n### D3 Done here\n- [x] A) Yes\nReply:\n");
     const published: Published = { asks: asks(rawAsk(9, { priority: "P2" }), rawAsk(8)), unavailable: false };
     const cards = inboxCards({ published, document: { entries, marks: new Map() }, drafts: [draft()] });
-    assert.deepEqual(cards.map((c) => `${c.key}${c.answered ? " (answered)" : ""}`), ["cgwalters-forge/tracker#9", "cgwalters-forge/tracker#8", "document:D2", "send:40", "document:D3 (answered)"]);
+    assert.deepEqual(cards.map((c) => `${c.key}${c.answered ? " (answered)" : ""}`), ["jmarrero-forge/tracker#9", "jmarrero-forge/tracker#8", "document:D2", "send:40", "document:D3 (answered)"]);
   });
 
   it("marks the cards of a list that can't be read now", () => {

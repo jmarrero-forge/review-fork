@@ -20,7 +20,7 @@ const render = createRenderer(win as unknown as Parameters<typeof createRenderer
 let confirmed = true;
 window.confirm = () => confirmed;
 
-const OPERATOR = "cgwalters";
+const OPERATOR = "jmarrero";
 const A = "a".repeat(40);
 const B = "b".repeat(40);
 const PR = { owner: "up", repo: "proj", number: 7 };
@@ -123,7 +123,7 @@ describe("Approve card", () => {
   it("sends nothing under another viewer's token", async () => {
     const r = await click(pull(), "someone-else");
     assert.deepEqual(writes(r.calls), []);
-    assert.match(r.status, /someone-else's, not cgwalters's/);
+    assert.match(r.status, /someone-else's, not jmarrero's/);
   });
 
   it("reports a failed write as uncertain and never retries it", async () => {
@@ -146,7 +146,7 @@ describe("Approve card", () => {
 
   it("refuses a review ask about another head rather than approve one the bot didn't ask about", async () => {
     const { gh, calls } = forge(pull());
-    await assert.rejects(approveAt(gh, PR, A, { ref: { owner: "cgwalters-forge", repo: "tracker", number: 3 }, head: B }), /asks about bbbbbbbbbbbb/);
+    await assert.rejects(approveAt(gh, PR, A, { ref: { owner: "jmarrero-forge", repo: "tracker", number: 3 }, head: B }), /asks about bbbbbbbbbbbb/);
     assert.deepEqual(calls, []);
   });
 });
@@ -199,11 +199,11 @@ describe("digest card", () => {
 });
 
 describe("proposal on a card (close, merge)", () => {
-  const config: ActionConfig = { operator: OPERATOR, planner: "cgwalters-bot", tracker: "example/tracker", repositories: ["example/tasks", "example/tracker"], project: "", org: "" };
+  const config: ActionConfig = { operator: OPERATOR, planner: "jmarrero-bot", tracker: "example/tracker", repositories: ["example/tasks", "example/tracker"], project: "", org: "" };
 
   function offer(actions: Action[]): Comment {
     const proposal = { schema: "agent-board/operator-action/v1", title: "Tidy up", why: "Superseded.", actions } as Proposal;
-    return { id: "IC_p", databaseId: 10, body: `\`\`\`agent-board-action\n${JSON.stringify(proposal)}\n\`\`\``, updatedAt: "2026-10-30T00:00:00Z", author: { login: "cgwalters-bot" }, editor: null, lastEditedAt: null };
+    return { id: "IC_p", databaseId: 10, body: `\`\`\`agent-board-action\n${JSON.stringify(proposal)}\n\`\`\``, updatedAt: "2026-10-30T00:00:00Z", author: { login: "jmarrero-bot" }, editor: null, lastEditedAt: null };
   }
 
   /** The tracker's comments with receipts as they are posted, an issue, and a PR whose head is `head` and whose merge answers `merge`. */
@@ -274,6 +274,6 @@ describe("proposal on a card (close, merge)", () => {
   it("refuses another viewer's token before anything is reserved", async () => {
     const r = await run(offer([{ type: "close_issue", repo: "example/tasks", number: 1, reason: "Superseded" }]), { login: "someone-else" });
     assert.deepEqual(writes(r.ran), []);
-    assert.match(r.text, /Execution requires cgwalters's own token/);
+    assert.match(r.text, /Execution requires jmarrero's own token/);
   });
 });

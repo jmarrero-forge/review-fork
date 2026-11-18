@@ -783,14 +783,14 @@ mod tests {
         assert_eq!(
             token(
                 &[
-                    "--octo-sts-scope=cgwalters-forge",
+                    "--octo-sts-scope=jmarrero-forge",
                     "--octo-sts-identity=control-plane",
                     "--octo-sts-token-file=/var/run/secrets/tokens/octo-sts",
                 ],
                 None
             ),
             TokenConfig::OctoSts {
-                scope: "cgwalters-forge".into(),
+                scope: "jmarrero-forge".into(),
                 identity: "control-plane".into(),
                 token_file: "/var/run/secrets/tokens/octo-sts".into(),
             }

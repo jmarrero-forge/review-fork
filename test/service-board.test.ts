@@ -79,7 +79,7 @@ describe("service PRs and waiting sections", () => {
     assert.equal(waiting.complete, false);
     assert.equal(waiting.error, state.waiting!.error);
     assert.equal(waiting.readAt, state.waiting!.readAt);
-    assert.deepEqual(serviceRepositories(state), ["bootc-dev/bootc", "bootc-dev/cgwalters-devspace-sandbox", "cgwalters-forge/bootc", "cgwalters-forge/tracker"]);
+    assert.deepEqual(serviceRepositories(state), ["bootc-dev/bootc", "bootc-dev/jmarrero-devspace-sandbox", "jmarrero-forge/bootc", "jmarrero-forge/tracker"]);
   });
 });
 
@@ -116,7 +116,7 @@ describe("service board view", () => {
     assert.match(text, /Service runs 0/);
     assert.match(text, /Bot PRs 1/);
     assert.match(text, /Waiting on you 1/);
-    assert.ok(!text.includes("cgwalters-forge/tracker#1500"));
+    assert.ok(!text.includes("jmarrero-forge/tracker#1500"));
     assert.match(text, /still describe the whole section/);
     // Runs are complete and current, so this repository has none; waiting is incomplete.
     assert.match(text, /No items reported\./);

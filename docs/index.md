@@ -2,13 +2,13 @@
 
 > This text is LLM generated.
 
-Read this documentation [on the website](https://cgwalters-forge.github.io/review/docs/)
-or open the [Pages app](https://cgwalters-forge.github.io/review/).
+Read this documentation [on the website](https://jmarrero.github.io/review/docs/)
+or open the [Pages app](https://jmarrero.github.io/review/).
 `npm run build` renders `docs/*.md` into `dist/docs/` alongside the app;
 the existing Pages workflow publishes both. Repository-source links open on GitHub.
 
 The control app is a small interface for work proposed by
-[cgwalters-bot](https://github.com/cgwalters-bot) and by people: questions,
+[jmarrero-bot](https://github.com/jmarrero-bot) and by people: questions,
 approvals, review drafts and operator actions, with a head-checked PR review
 pane. The forge, git and markdown are the source of truth. Answers and edits
 are made as you, with your token; the build doesn't include private contents.
@@ -948,7 +948,7 @@ npx review-queue --json --filter composefs
 npx review-queue --filter org:composefs+P0
 ```
 
-`composefs` means upstream work, excluding cgwalters-bot and cgwalters-forge;
+`composefs` means upstream work, excluding jmarrero-bot and jmarrero-forge;
 `infra` means those two. See [queue-json.md](queue-json.md) for the
 `review-queue/v1` schema. Authentication uses `GH_TOKEN`, then `GITHUB_TOKEN`,
 then `gh auth token --hostname github.com`. It needs `read:project` for the
@@ -1020,7 +1020,7 @@ with pinned vendored schema and fixtures. The
 [workflow/review.toml](../workflow/review.toml); its approval requires
 `AGENT_REAL_REVIEWS=true` and the configured inference credentials.
 
-GitHub Pages publishes <https://cgwalters-forge.github.io/review/> on pushes
+GitHub Pages publishes <https://jmarrero.github.io/review/> on pushes
 to main. Sign in by pasting a personal access token. It stays in
 sessionStorage, or localStorage with remember, and goes only to GitHub.
 A short-lived classic token with `public_repo` and `read:project` covers

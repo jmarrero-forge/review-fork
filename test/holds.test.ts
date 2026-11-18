@@ -10,9 +10,9 @@ const AT = "2026-10-26T00:00:00Z";
 /** As agent-board's pass renders it (pass/holds.rs). */
 const body = (json: unknown) => `${HOLDS_MARKER}\nHolds as of ${AT}. Written by \`agent-board pass\`; the review app reads the JSON below.\n\n\`\`\`json\n${JSON.stringify(json, null, 2)}\n\`\`\`\n`;
 const wip = { item: null, url: null, epic: false, kind: "wip", reason: "2 of 2 runs active", operator: false, priority: null, question: null };
-const human = { item: "cgwalters-forge/tracker#446", url: "https://github.com/cgwalters-forge/tracker/issues/446", epic: false, kind: "needs-human", reason: "labelled needs-human", operator: true, priority: "P0", question: "Ship it?" };
+const human = { item: "jmarrero-forge/tracker#446", url: "https://github.com/jmarrero-forge/tracker/issues/446", epic: false, kind: "needs-human", reason: "labelled needs-human", operator: true, priority: "P0", question: "Ship it?" };
 const snapshot = (holds: unknown[] = [wip, human], over: Record<string, unknown> = {}) => ({ schema: "agent-board/holds/v1", at: AT, holds, ...over });
-const comment = (json: unknown, login = "cgwalters-bot"): RawComment => ({ user: { login }, body: body(json) });
+const comment = (json: unknown, login = "jmarrero-bot"): RawComment => ({ user: { login }, body: body(json) });
 
 describe("parseHolds", () => {
   for (const truncated of [0, 1]) it(`reconciles hold identities and details, respecting truncated=${truncated}`, () => {
@@ -20,7 +20,7 @@ describe("parseHolds", () => {
     raw.truncated = truncated;
     const list = parseHolds(body(raw))!.needsYou;
     assert.ok(list && typeof list === "object");
-    const expected = truncated ? ["cgwalters-forge/agent-board#728"] : [];
+    const expected = truncated ? ["jmarrero-forge/agent-board#728"] : [];
     assert.deepEqual(list.items.map((a) => a.key), expected);
     assert.deepEqual(list.identities!.map((i) => i.key), expected);
     assert.equal(list.excludedHolds, truncated ? 1 : 2);
@@ -34,9 +34,9 @@ describe("parseHolds", () => {
     ["holds not a list", snapshot(undefined, { holds: {} })],
     ["a key missing", snapshot([wip, { ...human, question: undefined }])],
     ["an item that is no reference", snapshot([{ ...human, item: "tracker#446" }])],
-    ["a link to another item", snapshot([{ ...human, url: "https://github.com/cgwalters-forge/tracker/issues/447" }])],
+    ["a link to another item", snapshot([{ ...human, url: "https://github.com/jmarrero-forge/tracker/issues/447" }])],
     ["a link off github.com", snapshot([{ ...human, url: "javascript:alert(1)" }])],
-    ["a link without an item", snapshot([{ ...wip, url: "https://github.com/cgwalters-forge/tracker/issues/446" }])],
+    ["a link without an item", snapshot([{ ...wip, url: "https://github.com/jmarrero-forge/tracker/issues/446" }])],
     ["operator not a boolean", snapshot([{ ...human, operator: "yes" }])],
     ["a priority the board has not", snapshot([{ ...human, priority: "urgent" }])],
     ["a kind that is no word", snapshot([{ ...human, kind: "<b>" }])],
@@ -109,18 +109,18 @@ describe("findHolds", () => {
     ["not someone else's copy", [comment(snapshot(), "mallory")], undefined],
     ["the newest of the bot's", [comment(snapshot([wip])), comment(snapshot([human])), comment(snapshot([]), "mallory")], ["labelled needs-human"]],
     ["nothing, not an older one, when the newest doesn't parse", [comment(snapshot()), comment(snapshot([{ ...human, epic: null }]))], undefined],
-    ["not the usage comment", [{ user: { login: "cgwalters-bot" }, body: "<!-- bot-usage v1 -->\n" }], undefined],
+    ["not the usage comment", [{ user: { login: "jmarrero-bot" }, body: "<!-- bot-usage v1 -->\n" }], undefined],
   ];
   for (const [name, comments, want] of cases) it(name, async () => assert.deepEqual((await findHolds(comments))?.holds.map((h) => h.reason), want));
 });
 
 describe("assembleHolds", () => {
   // A snapshot longer than one comment, as agent-board publishes it compressed (agent-board#774), in small parts.
-  const plain = body(snapshot([wip, ...Array.from({ length: 40 }, (_, n) => ({ ...human, item: `cgwalters-forge/tracker#${n + 1}`, url: `https://github.com/cgwalters-forge/tracker/issues/${n + 1}`, reason: `held ${n} `.repeat(20) }))]));
+  const plain = body(snapshot([wip, ...Array.from({ length: 40 }, (_, n) => ({ ...human, item: `jmarrero-forge/tracker#${n + 1}`, url: `https://github.com/jmarrero-forge/tracker/issues/${n + 1}`, reason: `held ${n} `.repeat(20) }))]));
   const next = "2026-10-26T00:10:00Z";
   const [first, ...rest] = compressedHolds(plain, AT, 400);
   const [, ...newer] = compressedHolds(plain.replaceAll(AT, next), next, 400);
-  const usage = { user: { login: "cgwalters-bot" }, body: "<!-- bot-usage v1 -->\n" };
+  const usage = { user: { login: "jmarrero-bot" }, body: "<!-- bot-usage v1 -->\n" };
   it("splits the fixture into several parts", () => assert.ok(rest.length >= 2, String(rest.length)));
   // name, the issue's comments oldest first, whether the plain comment is assembled
   const cases: [string, RawComment[], boolean][] = [
@@ -143,16 +143,16 @@ describe("assembleHolds", () => {
 
 /** The example in agent-board's docs/pass.md, verbatim. */
 const DOC_EXAMPLE = `{"schema":"agent-board/needs-you/v2","complete":true,"validated_at":"2026-10-30T09:30:00Z","changed_at":"2026-10-30T09:00:00Z","sources":{"epics":"complete","items":"complete","reviews":"complete","proposals":"complete","digest":"off"},"summaries":"complete","omitted":0,"count":2,"items":[
-{"key":"cgwalters-forge/tracker#446","item":"cgwalters-forge/tracker#446","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T18:24:18Z","ask":"Ship 1.0 today?","recommendation":"Yes, CI is green.","target":"https://github.com/cgwalters-forge/tracker/issues/446","head":null,"action":{"type":"issue","repository":"cgwalters-forge/tracker","number":446},"source_ref":{"type":"hold","repository":"cgwalters-forge/tracker","number":446}},
-{"key":"cgwalters-forge/bot-ops#5/comment-21","item":"cgwalters-forge/bot-ops#5","source":"proposals","kind":"operator-action","priority":null,"waiting_since":"2026-10-20T00:00:00Z","ask":"Label tracker#3","recommendation":"Because.","target":"https://github.com/cgwalters-forge/bot-ops/issues/5#issuecomment-21","head":null,"action":{"type":"operator_action","repository":"cgwalters-forge/bot-ops","number":5,"comment":21},"source_ref":{"type":"comment","repository":"cgwalters-forge/bot-ops","number":5,"comment":21}}]}`;
+{"key":"jmarrero-forge/tracker#446","item":"jmarrero-forge/tracker#446","source":"items","kind":"needs-human","priority":"P0","waiting_since":"2026-10-29T18:24:18Z","ask":"Ship 1.0 today?","recommendation":"Yes, CI is green.","target":"https://github.com/jmarrero-forge/tracker/issues/446","head":null,"action":{"type":"issue","repository":"jmarrero-forge/tracker","number":446},"source_ref":{"type":"hold","repository":"jmarrero-forge/tracker","number":446}},
+{"key":"jmarrero-forge/bot-ops#5/comment-21","item":"jmarrero-forge/bot-ops#5","source":"proposals","kind":"operator-action","priority":null,"waiting_since":"2026-10-20T00:00:00Z","ask":"Label tracker#3","recommendation":"Because.","target":"https://github.com/jmarrero-forge/bot-ops/issues/5#issuecomment-21","head":null,"action":{"type":"operator_action","repository":"jmarrero-forge/bot-ops","number":5,"comment":21},"source_ref":{"type":"comment","repository":"jmarrero-forge/bot-ops","number":5,"comment":21}}]}`;
 
 describe("parseNeedsYou", () => {
   it("reads the list agent-board documents", () => {
     const l = parseNeedsYou(JSON.parse(DOC_EXAMPLE));
     assert.ok(typeof l === "object");
     assert.deepEqual([l.complete, l.validatedAt, l.changedAt, l.summaries, l.omitted, l.refused], [true, "2026-10-30T09:30:00Z", "2026-10-30T09:00:00Z", "complete", 0, 0]);
-    assert.deepEqual(l.items[0], { key: "cgwalters-forge/tracker#446", item: "cgwalters-forge/tracker#446", source: "items", kind: "needs-human", priority: "P0", waitingSince: "2026-10-29T18:24:18Z", ask: "Ship 1.0 today?", recommendation: "Yes, CI is green.", action: { type: "issue", repository: "cgwalters-forge/tracker", number: 446 }, carried: false });
-    assert.deepEqual(l.items[1]!.action, { type: "operator_action", repository: "cgwalters-forge/bot-ops", number: 5, comment: 21 });
+    assert.deepEqual(l.items[0], { key: "jmarrero-forge/tracker#446", item: "jmarrero-forge/tracker#446", source: "items", kind: "needs-human", priority: "P0", waitingSince: "2026-10-29T18:24:18Z", ask: "Ship 1.0 today?", recommendation: "Yes, CI is green.", action: { type: "issue", repository: "jmarrero-forge/tracker", number: 446 }, carried: false });
+    assert.deepEqual(l.items[1]!.action, { type: "operator_action", repository: "jmarrero-forge/bot-ops", number: 5, comment: 21 });
   });
 
   it("reads it from the hold comment, and an older one without it as no list", async () => {
@@ -195,12 +195,12 @@ describe("parseNeedsYou", () => {
   for (const [name, edit] of refused) it(`leaves out ${name}`, () => {
     const l = parseNeedsYou(rawNeedsYou([rawAsk(1), rawAsk(2, edit)], "2026-10-30T09:30:00Z"));
     assert.ok(typeof l === "object");
-    assert.deepEqual([l.items.map((a) => a.key), l.refused, l.complete], [["cgwalters-forge/tracker#1"], 1, false]);
+    assert.deepEqual([l.items.map((a) => a.key), l.refused, l.complete], [["jmarrero-forge/tracker#1"], 1, false]);
   });
 
   it("joins well-formed request descriptors and keeps malformed ones read-only", () => {
     const action = (kind: string, supported = false) => ({ kind, supported, reason: `${kind}?` });
-    const request = (n: number, over: Record<string, unknown> = {}) => ({ key: `cgwalters-forge/tracker#${n}`, forge: "github.com", quality: "decision", actions: [action("reply")], ...over });
+    const request = (n: number, over: Record<string, unknown> = {}) => ({ key: `jmarrero-forge/tracker#${n}`, forge: "github.com", quality: "decision", actions: [action("reply")], ...over });
     const l = parseNeedsYou(rawNeedsYou([rawAsk(1), rawAsk(2), rawAsk(3), rawAsk(4)], "2026-10-30T09:30:00Z", { requests: [
       request(1), request(1, { forge: "https://forgejo.example/git", actions: [action("close")] }),
       request(2, { quality: "fine" }), request(3, { actions: [{ kind: "reply", supported: "yes", reason: "r" }] }), request(9),
@@ -224,8 +224,8 @@ describe("parseNeedsYou", () => {
 
 describe("holdAsks", () => {
   it("lists the operator's holds on items, in the snapshot's order, and nothing else", () => {
-    const holds = parseHolds(body(snapshot([wip, { ...human, operator: false, item: "cgwalters-forge/tracker#1", url: "https://github.com/cgwalters-forge/tracker/issues/1" }, human])))!;
-    assert.deepEqual(holdAsks(holds).map((a) => [a.key, a.ask, a.priority, a.action]), [["cgwalters-forge/tracker#446", "Ship it?", "P0", { type: "issue", repository: "cgwalters-forge/tracker", number: 446 }]]);
+    const holds = parseHolds(body(snapshot([wip, { ...human, operator: false, item: "jmarrero-forge/tracker#1", url: "https://github.com/jmarrero-forge/tracker/issues/1" }, human])))!;
+    assert.deepEqual(holdAsks(holds).map((a) => [a.key, a.ask, a.priority, a.action]), [["jmarrero-forge/tracker#446", "Ship it?", "P0", { type: "issue", repository: "jmarrero-forge/tracker", number: 446 }]]);
   });
 });
 

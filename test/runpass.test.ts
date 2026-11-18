@@ -7,21 +7,21 @@ import { activePassView } from "../src/github/passview.ts";
 import { fixture, installDom, scriptedFetch } from "./helpers.ts";
 
 installDom();
-const root = "/repos/cgwalters-forge/tracker";
+const root = "/repos/jmarrero-forge/tracker";
 const workflow = `${root}/actions/workflows/poll.yml`;
 function facts(): PassFacts {
   const data = fixture<{ pass_view: PassView }>("pass-view.json").pass_view;
   data.observed_at = new Date().toISOString();
   data.complete = true; data.omitted = 0;
   data.pools[0]!.resets_at = new Date(Date.now() + 3_600_000).toISOString();
-  return { data, login: "cgwalters" };
+  return { data, login: "jmarrero" };
 }
 function api(over: (method: string, path: string) => ReturnType<Parameters<typeof scriptedFetch>[0]> = () => undefined) {
   const mock = scriptedFetch((method, url) => {
     const u = new URL(url); const path = u.pathname + u.search;
     const replacement = over(method, path);
     if (replacement) return replacement;
-    if (path === "/user") return { body: { login: "cgwalters" } };
+    if (path === "/user") return { body: { login: "jmarrero" } };
     if (path === root) return { body: { default_branch: "main", permissions: { push: true } } };
     if (path.startsWith(`${workflow}/runs?`)) return { body: { total_count: 0, workflow_runs: [] } };
     if (method === "POST" && path === `${workflow}/dispatches`) return { body: { workflow_run_id: 73 } };
@@ -172,7 +172,7 @@ describe("manual applying pass", () => {
     confirmed = true; run!.click(); run!.click(); await settle();
     assert.equal(calls.filter((c) => c.method === "POST").length, 1);
     assert.equal(run!.disabled, true);
-    assert.equal(runPassControl(gh, facts, state).querySelector("a")!.href, "https://github.com/cgwalters-forge/tracker/actions/runs/73");
+    assert.equal(runPassControl(gh, facts, state).querySelector("a")!.href, "https://github.com/jmarrero-forge/tracker/actions/runs/73");
   });
 
   it("updates the mounted view when availability and dispatch finish across snapshot replacement", async () => {
@@ -187,7 +187,7 @@ describe("manual applying pass", () => {
     const again = runPassControl(gh, facts, state, () => true);
     await settle();
     assert.match(again.textContent!, /Applying pass requested/);
-    assert.equal(again.querySelector("a")!.href, "https://github.com/cgwalters-forge/tracker/actions/runs/73");
+    assert.equal(again.querySelector("a")!.href, "https://github.com/jmarrero-forge/tracker/actions/runs/73");
   });
 
   it("keeps successful and uncertain receipts visible after an absent or malformed publication", () => {

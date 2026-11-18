@@ -15,7 +15,7 @@ test("Approve selected approves at the assessed head, and skips a PR whose head 
   const items = approve();
   const closed = { ...items[0]!, pr: { ...items[0]!.pr, number: 70 } };
   const f = scriptedFetch((m, url) => {
-    if (url.endsWith("/user")) return { body: { login: "cgwalters" } };
+    if (url.endsWith("/user")) return { body: { login: "jmarrero" } };
     if (m === "GET" && url.endsWith("/reviews?per_page=100")) return { body: [] };
     if (m === "GET" && url.endsWith("/pulls/7")) return { body: { state: "open", head: { sha: "1".repeat(40) } } };
     if (m === "GET" && url.endsWith("/pulls/8")) return { body: { state: "open", head: { sha: "9".repeat(40) } } };

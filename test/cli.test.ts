@@ -8,13 +8,13 @@ import { type Io, parseArgs, readOnly, run, tokenFrom, UsageError } from "../src
 import { fields, fixture, rawItems, scriptedFetch, type Scripted } from "./helpers.ts";
 
 const API = "https://api.github.com";
-const PROJECT = `${API}/orgs/cgwalters-forge/projectsV2/1`;
+const PROJECT = `${API}/orgs/jmarrero-forge/projectsV2/1`;
 const NOW = new Date("2026-01-20T00:00:00Z");
 const HEAD = "a".repeat(40);
 const OLD = "b".repeat(40);
 
 /** His review of a forge PR at `commit`. */
-const approved = (commit: string) => [{ user: { login: "cgwalters" }, state: "APPROVED", submitted_at: "2026-01-11T00:00:00Z", commit_id: commit }];
+const approved = (commit: string) => [{ user: { login: "jmarrero" }, state: "APPROVED", submitted_at: "2026-01-11T00:00:00Z", commit_id: commit }];
 
 /** The board, the forge and their reviews, from fixtures; anything else is unexpected. */
 function world(method: string, url: string): Scripted | undefined {
@@ -27,17 +27,17 @@ function world(method: string, url: string): Scripted | undefined {
     if (decodeURIComponent(path).includes("user-review-requested:")) return { body: { total_count: 0, items: [] } };
     return { body: fixture("forge-search.json") };
   }
-  const pulls = /^\/repos\/cgwalters-forge\/(\w+)\/pulls\?state=open/.exec(path);
+  const pulls = /^\/repos\/jmarrero-forge\/(\w+)\/pulls\?state=open/.exec(path);
   if (pulls) {
     const n = { widget: 5, homegit: 9, bootc: 3 }[pulls[1] as string];
     return { body: [{ number: n, html_url: "", head: { sha: HEAD }, base: {} }] };
   }
-  if (/^\/repos\/cgwalters-forge\/homegit\/pulls\/9\/reviews/.test(path)) return { body: approved(HEAD) };
-  if (/^\/repos\/cgwalters-forge\/bootc\/pulls\/3\/reviews/.test(path)) return { body: approved(OLD) };
-  if (/^\/repos\/cgwalters-forge\/\w+\/(pulls\/\d+\/reviews|issues\/\d+\/comments)/.test(path)) return { body: [] };
+  if (/^\/repos\/jmarrero-forge\/homegit\/pulls\/9\/reviews/.test(path)) return { body: approved(HEAD) };
+  if (/^\/repos\/jmarrero-forge\/bootc\/pulls\/3\/reviews/.test(path)) return { body: approved(OLD) };
+  if (/^\/repos\/jmarrero-forge\/\w+\/(pulls\/\d+\/reviews|issues\/\d+\/comments)/.test(path)) return { body: [] };
   // The one open question with comments: only the bot's, so unanswered.
-  if (path.startsWith("/repos/cgwalters-forge/tracker/issues/21/comments")) {
-    return { body: [{ user: { login: "cgwalters-bot" }, created_at: "2026-01-06T00:00:00Z", html_url: "https://github.com/c/1", body: "ping" }] };
+  if (path.startsWith("/repos/jmarrero-forge/tracker/issues/21/comments")) {
+    return { body: [{ user: { login: "jmarrero-bot" }, created_at: "2026-01-06T00:00:00Z", html_url: "https://github.com/c/1", body: "ping" }] };
   }
   return undefined;
 }
@@ -72,15 +72,15 @@ describe("review-queue --json", () => {
     "  item:PVTI_synthetic_question answer",
     "item:PVTI_synthetic_upstream_pr see-asks",
     "  item:PVTI_synthetic_upstream_question answer",
-    "pr:cgwalters-forge/widget#5 review",
+    "pr:jmarrero-forge/widget#5 review",
     "item:PVTI_synthetic_upstream_issue see-asks",
     "  item:PVTI_synthetic_review_ask review",
     "  item:PVTI_synthetic_chore_ask rerun",
     "item:PVTI_synthetic_redacted report-bug",
     "item:PVTI_synthetic_unrecommended_question answer",
     "item:PVTI_synthetic_open_question answer",
-    "pr:cgwalters-forge/homegit#9 comment",
-    "pr:cgwalters-forge/bootc#3 review",
+    "pr:jmarrero-forge/homegit#9 comment",
+    "pr:jmarrero-forge/bootc#3 review",
     "item:PVTI_synthetic_home_issue report-bug",
     "item:PVTI_synthetic_closed_question wait",
   ];
@@ -91,10 +91,10 @@ describe("review-queue --json", () => {
       argv: ["--json", "--filter", "composefs"],
       want: all.filter((l) => /widget#5|upstream_issue|review_ask|chore_ask|upstream_pr|upstream_question|bootc#3/.test(l)),
     },
-    { name: "infra: the bot's own", argv: ["--json", "--filter=infra"], want: ["pr:cgwalters-forge/homegit#9 comment", "item:PVTI_synthetic_home_issue report-bug"] },
+    { name: "infra: the bot's own", argv: ["--json", "--filter=infra"], want: ["pr:jmarrero-forge/homegit#9 comment", "item:PVTI_synthetic_home_issue report-bug"] },
     { name: "a bare priority", argv: ["--json", "--filter", "P0"], want: all.slice(0, 3) },
     { name: "one org and a priority", argv: ["--json", "--filter", "org:bootc-dev+P1"], want: [] },
-    { name: "org and no priority", argv: ["--filter", "org:bootc-dev+none"], want: ["pr:cgwalters-forge/bootc#3 review"] },
+    { name: "org and no priority", argv: ["--filter", "org:bootc-dev+none"], want: ["pr:jmarrero-forge/bootc#3 review"] },
   ];
   for (const c of cases) {
     it(c.name, async () => {
@@ -113,20 +113,20 @@ describe("review-queue --json", () => {
     const doc = JSON.parse((await runCli(["--json"])).stdout) as QueueJson;
     assert.equal(doc.generatedAt, NOW.toISOString());
     assert.equal(doc.filter, "all");
-    const pr = doc.entries.find((e) => e.kind === "pr" && e.where === "cgwalters-forge/bootc#3");
+    const pr = doc.entries.find((e) => e.kind === "pr" && e.where === "jmarrero-forge/bootc#3");
     assert.deepEqual(pr, {
-      key: "pr:cgwalters-forge/bootc#3",
+      key: "pr:jmarrero-forge/bootc#3",
       kind: "pr",
       title: "lib: Pushed since the approval",
-      where: "cgwalters-forge/bootc#3",
+      where: "jmarrero-forge/bootc#3",
       priority: null,
       rankPriority: null,
       org: "bootc-dev",
       since: "2026-01-02T00:00:00Z",
       settled: false,
       bug: false,
-      url: "https://github.com/cgwalters-forge/bootc/pull/3",
-      appUrl: "https://cgwalters-forge.github.io/review/#pr/cgwalters-forge/bootc/3",
+      url: "https://github.com/jmarrero-forge/bootc/pull/3",
+      appUrl: "https://jmarrero.github.io/review/#pr/jmarrero-forge/bootc/3",
       verdict: { state: "approved-older", label: "approved an older head" },
       action: { verb: "review", summary: "review the commits pushed since your approval" },
       asks: [],
@@ -190,18 +190,18 @@ describe("review-queue: whose turn a PR is", () => {
       const path = url.slice(API.length);
       // The requests search finds an upstream PR asking for his review; the other search, the forge's drafts.
       if (path.startsWith("/search/issues?") && decodeURIComponent(path).includes("user-review-requested:")) {
-        const item = { html_url: UPSTREAM, title: "widget: Upstream fix", body: "", user: { login: "cgwalters-bot" }, created_at: "2026-01-07T00:00:00Z", updated_at: "2026-01-08T00:00:00Z", draft: false, pull_request: {} };
+        const item = { html_url: UPSTREAM, title: "widget: Upstream fix", body: "", user: { login: "jmarrero-bot" }, created_at: "2026-01-07T00:00:00Z", updated_at: "2026-01-08T00:00:00Z", draft: false, pull_request: {} };
         return { body: { total_count: 1, items: [item] } };
       }
-      if (path.startsWith("/repos/cgwalters-forge/widget/pulls/5/reviews")) {
-        return { body: [{ user: { login: "cgwalters" }, state: "CHANGES_REQUESTED", submitted_at: "2026-01-11T00:00:00Z", commit_id: HEAD }] };
+      if (path.startsWith("/repos/jmarrero-forge/widget/pulls/5/reviews")) {
+        return { body: [{ user: { login: "jmarrero" }, state: "CHANGES_REQUESTED", submitted_at: "2026-01-11T00:00:00Z", commit_id: HEAD }] };
       }
-      if (path.startsWith("/repos/cgwalters-forge/widget/issues/5/comments")) {
-        return { body: replied ? [{ user: { login: "cgwalters-bot" }, created_at: "2026-01-12T00:00:00Z", html_url: "https://github.com/c/2", body: "done" }] : [] };
+      if (path.startsWith("/repos/jmarrero-forge/widget/issues/5/comments")) {
+        return { body: replied ? [{ user: { login: "jmarrero-bot" }, created_at: "2026-01-12T00:00:00Z", html_url: "https://github.com/c/2", body: "done" }] : [] };
       }
-      if (/^\/repos\/cgwalters-forge\/\w+\/pulls\/\d+\/comments/.test(path)) return { body: [] };
+      if (/^\/repos\/jmarrero-forge\/\w+\/pulls\/\d+\/comments/.test(path)) return { body: [] };
       if (path === "/repos/example-upstream/widget/pulls/60") {
-        return { body: { number: 60, html_url: UPSTREAM, state: "open", title: "widget: Upstream fix", requested_reviewers: [{ login: "cgwalters" }], head: { sha: HEAD }, base: { ref: "main" } } };
+        return { body: { number: 60, html_url: UPSTREAM, state: "open", title: "widget: Upstream fix", requested_reviewers: [{ login: "jmarrero" }], head: { sha: HEAD }, base: { ref: "main" } } };
       }
       if (path.startsWith("/repos/example-upstream/widget/commits/")) return { body: { total_count: 0, check_runs: [] } };
       if (/^\/repos\/example-upstream\/widget\/(rules|pulls\/60\/reviews|issues\/60\/(comments|timeline))/.test(path)) return { body: [] };
@@ -213,7 +213,7 @@ describe("review-queue: whose turn a PR is", () => {
     const r = await runCli(["--json"], turns(false));
     assert.equal(r.stderr, "");
     const doc = JSON.parse(r.stdout) as QueueJson;
-    const forge = pr(doc, "cgwalters-forge/widget#5");
+    const forge = pr(doc, "jmarrero-forge/widget#5");
     assert.deepEqual(forge?.wait, { onBot: true, reasons: [] });
     assert.equal(forge?.action.verb, "wait");
     assert.equal(doc.entries.at(-1), forge);
@@ -222,12 +222,12 @@ describe("review-queue: whose turn a PR is", () => {
     const text = (await runCli(["--text"], turns(false), true)).stdout.split("\n");
     const group = text.indexOf("== Changes requested, waiting on the bot");
     assert.ok(group > 0);
-    assert.match(text[group + 1] ?? "", /cgwalters-forge\/widget#5/);
+    assert.match(text[group + 1] ?? "", /jmarrero-forge\/widget#5/);
   });
 
   it("is his again once the bot replied", async () => {
     const doc = JSON.parse((await runCli(["--json"], turns(true))).stdout) as QueueJson;
-    const forge = pr(doc, "cgwalters-forge/widget#5");
+    const forge = pr(doc, "jmarrero-forge/widget#5");
     assert.deepEqual(forge?.wait, { onBot: false, reasons: ["updated"] });
     assert.deepEqual(forge?.action, { verb: "review", summary: "the bot responded to your change request" });
     assert.equal(doc.counts.open, 13);
@@ -243,7 +243,7 @@ describe("review-queue: whose turn a PR is", () => {
 
   it("still lists it when a forge PR's reviews can't be read", async () => {
     const route = turns(false);
-    const r = await runCli(["--json"], (m, url) => (url.includes("/cgwalters-forge/bootc/pulls/3/reviews") ? { status: 503, body: { message: "down" } } : route(m, url)));
+    const r = await runCli(["--json"], (m, url) => (url.includes("/jmarrero-forge/bootc/pulls/3/reviews") ? { status: 503, body: { message: "down" } } : route(m, url)));
     const doc = JSON.parse(r.stdout) as QueueJson;
     assert.deepEqual(doc.warnings.map((w) => w.split(":")[0]), ["couldn't read the forge's PRs or their reviews"]);
     assert.ok(pr(doc, "example-upstream/widget#60"));
@@ -269,7 +269,7 @@ describe("review-queue --text", () => {
     const lines = r.stdout.split("\n");
     assert.match(lines[0] ?? "", /^2 open of 3 row\(s\) in 2 entries \(filter: all\+P0\)$/);
     assert.equal(lines[2], "== P0");
-    assert.ok(lines.some((l) => /^ {4}question +cgwalters-forge\/tracker#21 /.test(l)));
+    assert.ok(lines.some((l) => /^ {4}question +jmarrero-forge\/tracker#21 /.test(l)));
     assert.ok(lines.some((l) => /-> answer: answer the question \(the bot recommends A\)/.test(l)));
     assert.ok(lines.some((l) => /A\) .*\(recommended\)$/.test(l)));
   });
@@ -277,7 +277,7 @@ describe("review-queue --text", () => {
   it("says when nothing waits, and warns about an org nothing targets", async () => {
     const r = await runCli(["--text", "--filter", "org:nobody"]);
     assert.match(r.stdout, /Nothing waiting on you\.\n$/);
-    assert.match(r.stdout, /warning: no entry targets org nobody; the queue has bootc-dev, cgwalters-bot, example-upstream, no org, other\n/);
+    assert.match(r.stdout, /warning: no entry targets org nobody; the queue has bootc-dev, example-upstream, jmarrero-bot, no org, other\n/);
   });
 });
 

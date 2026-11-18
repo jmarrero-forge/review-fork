@@ -27,7 +27,7 @@ export function renderDocumentation(source: string, file: string, pages: Set<str
       if (target.pathname.startsWith("/docs/") && pages.has(name)) {
         child.attrSet("href", `${name.replace(/\.md$/, ".html")}${target.search}${target.hash}`);
       } else {
-        child.attrSet("href", `https://github.com/cgwalters-forge/review/blob/main${target.pathname}${target.search}${target.hash}`);
+        child.attrSet("href", `https://github.com/jmarrero/review/blob/main${target.pathname}${target.search}${target.hash}`);
       }
     }
   }

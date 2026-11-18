@@ -19,14 +19,14 @@ function holdsComment(over: Record<string, unknown> = {}) {
     schema: "agent-board/holds/v1", at: "2026-11-06T12:00:00Z", holds: publishedTestHolds(needs_you), needs_you,
     pass_view: fixture<{ pass_view: unknown }>("pass-view.json").pass_view, dispatchable_work: fixture("dispatchable-work.json"), ...over,
   };
-  return [{ user: { login: "cgwalters-bot" }, body: `<!-- agent-board-holds v1 -->\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\`` }];
+  return [{ user: { login: "jmarrero-bot" }, body: `<!-- agent-board-holds v1 -->\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\`` }];
 }
 
 type Route = Parameters<typeof scriptedFetch>[0];
 
 /** The agent workflows' run lists: one in flight on tracker's dispatch.yml unless the route answers. */
 const WORKFLOW_RUNS = /\/actions\/workflows\/(dispatch|agent)\.yml\/runs\?status=(\w+)&per_page=100$/;
-const LIVE = { id: 7, display_title: "implement example/work#11 (claude)", status: "in_progress", created_at: "2026-11-06T11:00:00Z", run_started_at: "2026-11-06T11:00:00Z", repository: { full_name: "cgwalters-forge/tracker" } };
+const LIVE = { id: 7, display_title: "implement example/work#11 (claude)", status: "in_progress", created_at: "2026-11-06T11:00:00Z", run_started_at: "2026-11-06T11:00:00Z", repository: { full_name: "jmarrero-forge/tracker" } };
 
 async function cli(argv: string[], comments: unknown = holdsComment(), route: Route = () => undefined) {
   const { fetchImpl, calls } = scriptedFetch((method, url, headers) => method === "GET" && url === `${API}${usagePath}` ? { body: comments }
@@ -61,7 +61,7 @@ describe("control-app", () => {
     assert.deepEqual(doc.passes[0].noStart.map((n: { kind: string }) => n.kind), ["no-ready-work", "replan-delay", "capped", "held"]);
     assert.equal(doc.passes[1].started.length, 2);
     assert.equal(doc.snapshotAt, "2026-11-06T12:00:00Z");
-    assert.deepEqual(doc.agents, [{ item: "example/work#11", kind: "implement", pool: "claude", status: "in_progress", startedAt: "2026-11-06T11:00:00Z", title: "implement example/work#11 (claude)", listedByPass: false, url: "https://github.com/example/work/issues/11", run: "https://github.com/cgwalters-forge/tracker/actions/runs/7" }]);
+    assert.deepEqual(doc.agents, [{ item: "example/work#11", kind: "implement", pool: "claude", status: "in_progress", startedAt: "2026-11-06T11:00:00Z", title: "implement example/work#11 (claude)", listedByPass: false, url: "https://github.com/example/work/issues/11", run: "https://github.com/jmarrero-forge/tracker/actions/runs/7" }]);
     // Every request was a read: the publication and the agent workflows' run lists.
     assert.deepEqual([...new Set(r.calls.map((c) => c.method))], ["GET"]);
     assert.equal(r.calls.length, 1 + 6);
@@ -216,7 +216,7 @@ describe("control-app", () => {
 
   describe("act commands", () => {
     const RUN = `${API}/repos/example/runner/actions/runs/42`;
-    const operator: Route = (method, url) => method === "GET" && url === `${API}/user` ? { body: { login: "cgwalters" } } : undefined;
+    const operator: Route = (method, url) => method === "GET" && url === `${API}/user` ? { body: { login: "jmarrero" } } : undefined;
     const liveRun: Route = (method, url) => operator(method, url, {}) ?? (method === "GET" && url === RUN
       ? { body: { id: 42, html_url: "https://github.com/example/runner/actions/runs/42", repository: { full_name: "example/runner" }, status: "in_progress" } }
       : method === "POST" && url === `${RUN}/cancel` ? { status: 202 } : undefined);
@@ -273,7 +273,7 @@ describe("control-app", () => {
     });
 
     it("run-pass --dry-run checks for an active pass and shows the dispatch, with no pass view needed", async () => {
-      const tracker = `${API}/repos/cgwalters-forge/tracker`;
+      const tracker = `${API}/repos/jmarrero-forge/tracker`;
       const runs = (active: number): Route => (method, url) => operator(method, url, {}) ?? (method !== "GET" ? undefined
         : url === tracker ? { body: { default_branch: "main", permissions: { push: true } } }
           : url.startsWith(`${tracker}/actions/workflows/poll.yml/runs?status=in_progress`) ? { body: { total_count: active, workflow_runs: [] } }
@@ -292,19 +292,19 @@ describe("control-app", () => {
     });
 
     it("file searches for duplicates, then files under the epic", async () => {
-      const tracker = `${API}/repos/cgwalters-forge/tracker`;
+      const tracker = `${API}/repos/jmarrero-forge/tracker`;
       const route = (found: string): Route => (method, url) => method !== "GET" ? undefined
-        : url.startsWith(`${API}/search/issues?`) ? { body: { items: [{ title: found, html_url: "https://github.com/cgwalters-forge/tracker/issues/5" }] } }
+        : url.startsWith(`${API}/search/issues?`) ? { body: { items: [{ title: found, html_url: "https://github.com/jmarrero-forge/tracker/issues/5" }] } }
           : url === `${tracker}/issues/3` ? { body: { state: "open", labels: [{ name: "epic" }] } } : undefined;
       const argv = ["file", "--epic", "3", "--title", "Add fold", "--label", "infra", "--dry-run"];
       const r = await cli(argv, holdsComment(), route("Add fold to the CLI"));
       assert.equal(r.status, 0, r.stderr);
       const doc = r.json();
-      assert.deepEqual(doc.similar, [{ title: "Add fold to the CLI", url: "https://github.com/cgwalters-forge/tracker/issues/5" }]);
+      assert.deepEqual(doc.similar, [{ title: "Add fold to the CLI", url: "https://github.com/jmarrero-forge/tracker/issues/5" }]);
       assert.equal(doc.url, null);
       assert.deepEqual(doc.wouldSend[0], { method: "POST", url: `${tracker}/issues`, body: { title: "Add fold", body: "", labels: ["needs-triage", "infra"] } });
       assert.equal(doc.wouldSend[1].url, `${tracker}/issues/3/sub_issues`);
-      assert.match(decodeURIComponent(r.calls.find((c) => c.url.includes("/search/"))!.url), /repo:cgwalters-forge\/tracker is:issue is:open in:title "Add fold"/);
+      assert.match(decodeURIComponent(r.calls.find((c) => c.url.includes("/search/"))!.url), /repo:jmarrero-forge\/tracker is:issue is:open in:title "Add fold"/);
       const dup = await cli(argv, holdsComment(), route("add fold"));
       assert.equal(dup.status, 1);
       assert.match(dup.stderr, /issues\/5 is open with this title/);

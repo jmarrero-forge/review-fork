@@ -20,17 +20,17 @@ const PLAN = '{"schema":"agent-board/job-plan/v1","repo":"example/work","item":1
 const fenced = (json: string) => `\`\`\`agent-board-plan\n${json}\n\`\`\``;
 const comment = (id: number, login: string, body: string, updated: string) => ({ body, author: { login }, editor: null as { login: string } | null, url: `https://github.com/example/work/issues/10#issuecomment-${id}`, createdAt: updated, lastEditedAt: null as string | null });
 const PLANS = [
-  comment(1, "cgwalters-bot", fenced(PLAN.replace("Look", "Old")), "2026-11-05T10:00:00Z"),
-  comment(2, "cgwalters", `Try again.\n\n${fenced(PLAN)}`, "2026-11-05T11:00:00Z"),
+  comment(1, "jmarrero-bot", fenced(PLAN.replace("Look", "Old")), "2026-11-05T10:00:00Z"),
+  comment(2, "jmarrero", `Try again.\n\n${fenced(PLAN)}`, "2026-11-05T11:00:00Z"),
   comment(3, "visitor", fenced(PLAN.replace("Look", "Visitor")), "2026-11-05T11:30:00Z"),
-  comment(4, "cgwalters-bot", `${fenced(PLAN.replace("Look", "Quoted")).replace(/^/gm, "> ")}\n\n\`\`\`\`\n${fenced(PLAN.replace("Look", "Nested"))}\n\`\`\`\``, "2026-11-05T11:40:00Z"),
+  comment(4, "jmarrero-bot", `${fenced(PLAN.replace("Look", "Quoted")).replace(/^/gm, "> ")}\n\n\`\`\`\`\n${fenced(PLAN.replace("Look", "Nested"))}\n\`\`\`\``, "2026-11-05T11:40:00Z"),
 ];
 
 interface Script { login?: string; scopes?: string; runs?: Record<number, unknown>; jobs?: unknown[]; comments?: unknown[] | ((page: number) => unknown[]); post?: Scripted }
 
 function gitHub(s: Script = {}) {
   const mock = scriptedFetch((method, url) => {
-    if (method === "GET" && url === `${API}/user`) return { body: { login: s.login ?? "cgwalters" }, ...(s.scopes === undefined ? {} : { headers: { "x-oauth-scopes": s.scopes } }) };
+    if (method === "GET" && url === `${API}/user`) return { body: { login: s.login ?? "jmarrero" }, ...(s.scopes === undefined ? {} : { headers: { "x-oauth-scopes": s.scopes } }) };
     const m = /^.*\/actions\/runs\/(\d+)(\/jobs\?filter=latest&per_page=100)?$/.exec(url);
     if (method === "GET" && m && url.startsWith(RUNS)) return m[2] ? { body: { jobs: s.jobs ?? [{ name: "agent", status: "completed", conclusion: "failure" }] } } : { body: (s.runs ?? {})[Number(m[1])] ?? run(Number(m[1]), "in_progress") };
     if (method === "POST" && url === `${API}/graphql`) {
@@ -60,7 +60,7 @@ describe("cancelRun", () => {
   const refusals: [string, AgentRun, Script, RegExp, number][] = [
     ["a run the view doesn't list as running", FINISHED, {}, /doesn't list run 40 as running/, 0],
     ["a run listed under another item", { ...RUNNING, item: "example/work#99" }, {}, /doesn't list run 42/, 0],
-    ["a non-operator viewer", RUNNING, { login: "someone" }, /signed in as someone; only cgwalters/, 1],
+    ["a non-operator viewer", RUNNING, { login: "someone" }, /signed in as someone; only jmarrero/, 1],
     ["a classic token without repo scope", RUNNING, { scopes: "public_repo, read:project" }, /needs the repo scope/, 1],
     ["a run already finished", RUNNING, { runs: { 42: run(42, "completed", "success") } }, /already finished \(success\)/, 2],
     ["a different run read back", RUNNING, { runs: { 42: { ...run(42, "in_progress"), repository: { full_name: "evil/runner" } } } }, /not in example\/runner/, 2],
@@ -90,7 +90,7 @@ describe("retryRun", () => {
 
   const refusals: [string, AgentRun, Script, RegExp][] = [
     ["a run the view doesn't list", { ...FINISHED, run: { repository: "example/runner", id: 7 } }, {}, /doesn't list run 7/],
-    ["a non-operator viewer", FINISHED, { login: "someone" }, /only cgwalters/],
+    ["a non-operator viewer", FINISHED, { login: "someone" }, /only jmarrero/],
     ["a running run", FINISHED, { runs: { 40: run(40, "in_progress") } }, /in_progress, not completed/],
     ["a successful run", FINISHED, { runs: { 40: run(40, "completed", "success") } }, /ended success/],
   ];
@@ -114,16 +114,16 @@ describe("redispatch", () => {
   });
 
   const refusals: [string, Script, RegExp][] = [
-    ["a non-operator viewer", { login: "someone" }, /only cgwalters/],
+    ["a non-operator viewer", { login: "someone" }, /only jmarrero/],
     ["a running run", {}, /in_progress, not finished/],
     ["a successful run", { runs: { 40: run(40, "completed", "success") } }, /ended success/],
-    ["an item without a writer's plan", { runs: { 40: run(40, "completed", "failure") }, comments: [PLANS[2]] }, /no job plan by cgwalters or cgwalters-bot/],
-    ["a newest plan of another kind", { runs: { 40: run(40, "completed", "failure") }, comments: [comment(5, "cgwalters", fenced(PLAN.replace("triage", "implement")), "2026-11-05T11:50:00Z")] }, /is for "implement", not the failed triage run/],
-    ["a malformed newest plan", { runs: { 40: run(40, "completed", "failure") }, comments: [...PLANS, comment(5, "cgwalters", fenced("{"), "2026-11-05T11:50:00Z")] }, /issuecomment-5, is not an agent-board\/job-plan\/v1 object/],
-    ["two plans in one comment", { runs: { 40: run(40, "completed", "failure") }, comments: [comment(5, "cgwalters", `${fenced(PLAN)}\n${fenced(PLAN)}`, "2026-11-05T11:50:00Z")] }, /holds 2 plans/],
+    ["an item without a writer's plan", { runs: { 40: run(40, "completed", "failure") }, comments: [PLANS[2]] }, /no job plan by jmarrero or jmarrero-bot/],
+    ["a newest plan of another kind", { runs: { 40: run(40, "completed", "failure") }, comments: [comment(5, "jmarrero", fenced(PLAN.replace("triage", "implement")), "2026-11-05T11:50:00Z")] }, /is for "implement", not the failed triage run/],
+    ["a malformed newest plan", { runs: { 40: run(40, "completed", "failure") }, comments: [...PLANS, comment(5, "jmarrero", fenced("{"), "2026-11-05T11:50:00Z")] }, /issuecomment-5, is not an agent-board\/job-plan\/v1 object/],
+    ["two plans in one comment", { runs: { 40: run(40, "completed", "failure") }, comments: [comment(5, "jmarrero", `${fenced(PLAN)}\n${fenced(PLAN)}`, "2026-11-05T11:50:00Z")] }, /holds 2 plans/],
     // An earlier redispatch, or a writer's correction the pass already started.
-    ["a plan newer than the run", { runs: { 40: run(40, "completed", "failure") }, comments: [...PLANS, comment(5, "cgwalters", fenced(PLAN), "2026-11-05T11:56:00Z")] }, /issuecomment-5, is newer than the run/],
-    ["a writer's plan edited away by a collaborator", { runs: { 40: run(40, "completed", "failure") }, comments: [...PLANS, { ...comment(5, "cgwalters", "Withdrawn.", "2026-11-05T09:00:00Z"), lastEditedAt: "2026-11-05T11:50:00Z", editor: { login: "collaborator" } }] }, /issuecomment-5 was last edited by collaborator/],
+    ["a plan newer than the run", { runs: { 40: run(40, "completed", "failure") }, comments: [...PLANS, comment(5, "jmarrero", fenced(PLAN), "2026-11-05T11:56:00Z")] }, /issuecomment-5, is newer than the run/],
+    ["a writer's plan edited away by a collaborator", { runs: { 40: run(40, "completed", "failure") }, comments: [...PLANS, { ...comment(5, "jmarrero", "Withdrawn.", "2026-11-05T09:00:00Z"), lastEditedAt: "2026-11-05T11:50:00Z", editor: { login: "collaborator" } }] }, /issuecomment-5 was last edited by collaborator/],
   ];
   for (const [name, script, want] of refusals) {
     it(`refuses ${name}`, async () => {
@@ -175,7 +175,7 @@ describe("planBlocks", () => {
 
 describe("fresh recovery state", () => {
   const failed = { 40: run(40, "completed", "failure") };
-  const record = { ...comment(6, "cgwalters-bot", "<!-- agent-board-dispatch: 2@2026-11-05T11:00:00Z -->\nDispatched [run](https://github.com/example/runner/actions/runs/40).", "2026-11-05T11:54:00Z"), editor: { login: "cgwalters-bot" }, lastEditedAt: "2026-11-05T11:56:00Z" };
+  const record = { ...comment(6, "jmarrero-bot", "<!-- agent-board-dispatch: 2@2026-11-05T11:00:00Z -->\nDispatched [run](https://github.com/example/runner/actions/runs/40).", "2026-11-05T11:54:00Z"), editor: { login: "jmarrero-bot" }, lastEditedAt: "2026-11-05T11:56:00Z" };
   for (const action of [redispatch, retryRun]) {
     it(`${action.name} ignores an ordinary bot-edited dispatch record`, async () => {
       const { fetchImpl, calls } = gitHub({ runs: failed, comments: [...PLANS, record] });
@@ -189,13 +189,13 @@ describe("fresh recovery state", () => {
     });
 
     const replacements = [
-      { ...comment(5, "cgwalters", fenced(PLAN), "2026-11-05T11:45:00Z"), lastEditedAt: "2026-11-05T11:50:00Z", editor: { login: "collaborator" } },
-      { ...comment(5, "cgwalters-bot", fenced(PLAN), "2026-11-05T11:45:00Z"), lastEditedAt: "2026-11-05T11:50:00Z" },
-      comment(5, "cgwalters", `\`\`\`agent-board-plan\n${PLAN}`, "2026-11-05T11:50:00Z"),
-      comment(5, "cgwalters", fenced(PLAN), "2026-11-05T11:56:00Z"),
+      { ...comment(5, "jmarrero", fenced(PLAN), "2026-11-05T11:45:00Z"), lastEditedAt: "2026-11-05T11:50:00Z", editor: { login: "collaborator" } },
+      { ...comment(5, "jmarrero-bot", fenced(PLAN), "2026-11-05T11:45:00Z"), lastEditedAt: "2026-11-05T11:50:00Z" },
+      comment(5, "jmarrero", `\`\`\`agent-board-plan\n${PLAN}`, "2026-11-05T11:50:00Z"),
+      comment(5, "jmarrero", fenced(PLAN), "2026-11-05T11:56:00Z"),
       { ...record, createdAt: "2026-11-05T11:56:00Z" },
       { ...record, createdAt: "2026-11-05T11:55:00Z", body: record.body.replace("runs/40", "runs/45") },
-      { ...comment(5, "cgwalters", fenced(PLAN), "2026-11-05T11:50:00Z"), lastEditedAt: undefined },
+      { ...comment(5, "jmarrero", fenced(PLAN), "2026-11-05T11:50:00Z"), lastEditedAt: undefined },
     ];
     for (const [i, replacement] of replacements.entries()) {
       it(`${action.name} refuses replacement/edit state ${i} after a reload`, async () => {
@@ -208,7 +208,7 @@ describe("fresh recovery state", () => {
 
   it("reposts HTML task text without modifying JSON", async () => {
     const plan = PLAN.replace("Look", "Keep <!-- task --> and <!-- open");
-    const { fetchImpl, calls } = gitHub({ runs: failed, comments: [comment(2, "CGWALTERS", fenced(plan), "2026-11-05T11:00:00Z")] });
+    const { fetchImpl, calls } = gitHub({ runs: failed, comments: [comment(2, "JMARRERO", fenced(plan), "2026-11-05T11:00:00Z")] });
     await redispatch(new GitHub(token, fetchImpl), view(), FINISHED);
     assert.match((calls.at(-1)!.body as { body: string }).body, /Keep <!-- task --> and <!-- open/);
     assert.deepEqual(planBlocks((calls.at(-1)!.body as { body: string }).body), [plan]);
@@ -228,13 +228,13 @@ describe("fresh recovery state", () => {
     stacks_on: [null, 0, 10, 11], unknown: [true],
   })) for (const value of values) invalid.push({ ...valid, [key]: value });
   for (const [i, plan] of invalid.entries()) it(`refuses invalid plan fields ${i}`, async () => {
-    const { fetchImpl, calls } = gitHub({ runs: failed, comments: [comment(2, "cgwalters", fenced(JSON.stringify(plan)), "2026-11-05T11:00:00Z")] });
+    const { fetchImpl, calls } = gitHub({ runs: failed, comments: [comment(2, "jmarrero", fenced(JSON.stringify(plan)), "2026-11-05T11:00:00Z")] });
     await assert.rejects(redispatch(new GitHub(token, fetchImpl), view(), FINISHED), /not an agent-board\/job-plan\/v1 object/);
     assert.equal(calls.filter((c) => c.method === "POST" && c.url !== `${API}/graphql`).length, 0);
   });
 
   it("accepts optional pool and effort and a Unicode brief at the character limit", async () => {
-    const { fetchImpl } = gitHub({ runs: failed, comments: [comment(2, "cgwalters", fenced(JSON.stringify({ ...valid, pool: "openai", effort: "heavy", brief: "😀".repeat(16_000) })), "2026-11-05T11:00:00Z")] });
+    const { fetchImpl } = gitHub({ runs: failed, comments: [comment(2, "jmarrero", fenced(JSON.stringify({ ...valid, pool: "openai", effort: "heavy", brief: "😀".repeat(16_000) })), "2026-11-05T11:00:00Z")] });
     await redispatch(new GitHub(token, fetchImpl), view(), FINISHED);
   });
 });

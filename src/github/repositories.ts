@@ -104,7 +104,7 @@ function queueDepth(report: MaintainerReport, repository: string, undecided: boo
 
 export function repositoriesView(blocks: readonly ReportBlock[], now = Date.now(), unavailable?: string, board: BoardPublication = {}): HTMLElement {
   const el = h("section", { class: "pass-view repository-board", "aria-label": "Repositories" }, h("h2", {}, "Repositories"),
-    h("p", { class: "repository-toolbar" }, "Published work by repository · ", h("a", { href: "https://github.com/cgwalters-forge/tracker/actions/workflows/poll.yml" }, "Run a pass now ↗"), " (opens tracker workflow; no dispatch from this page)"), boardNote(board, now));
+    h("p", { class: "repository-toolbar" }, "Published work by repository · ", h("a", { href: "https://github.com/jmarrero-forge/tracker/actions/workflows/poll.yml" }, "Run a pass now ↗"), " (opens tracker workflow; no dispatch from this page)"), boardNote(board, now));
   if (unavailable) el.append(h("p", { class: "warn" }, `Publication unavailable: ${unavailable}. Any facts below are last read, not current.`));
   if (!blocks.length) el.append(h("p", { class: "note" }, "Maintainer report not published (off or older producer)."));
   const latest = new Map<string, { report: MaintainerReport; commentUrl?: string }>();

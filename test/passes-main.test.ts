@@ -19,9 +19,9 @@ for (const route of ["inbox", "status"]) it(`retains cold cached history without
   assert.ok(store);
   const token = ["ghp", "x".repeat(24)].join("_");
   const cache = new ResponseCache();
-  assert.equal(await cache.attach(store, "cgwalters", await tokenHash(token)), true);
+  assert.equal(await cache.attach(store, "jmarrero", await tokenHash(token)), true);
   const data = fixture("passes.json");
-  const comments = [{ user: { login: "cgwalters-bot" }, body: `${PASSES_MARKER}\n\n\`\`\`json\n${JSON.stringify(data)}\n\`\`\`` }];
+  const comments = [{ user: { login: "jmarrero-bot" }, body: `${PASSES_MARKER}\n\n\`\`\`json\n${JSON.stringify(data)}\n\`\`\`` }];
   await new GitHub(async () => token, async () => Response.json(comments, { headers: { etag: '"history"' } }), cache).get(usagePath);
   await cache.flushed();
   const virtualConsole = new VirtualConsole();
@@ -49,7 +49,7 @@ for (const route of ["inbox", "status"]) it(`retains cold cached history without
         await gate;
         return Response.json({ message: "Synthetic publication failure" }, { status: 503 });
       }
-      return Response.json(url.pathname === "/user" ? { login: "cgwalters" }
+      return Response.json(url.pathname === "/user" ? { login: "jmarrero" }
         : url.pathname === "/graphql" ? { data: {} } : []);
     },
   });

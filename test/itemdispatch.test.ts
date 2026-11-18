@@ -5,10 +5,10 @@ import { type ItemDispatchState, itemDispatchControl, MAX_RECORD_CHECKS, recorde
 import type { PassView } from "../src/github/passview.ts";
 import { installDom, scriptedFetch } from "./helpers.ts";
 
-const ITEM = "cgwalters-forge/tracker#5";
-const ISSUE = "https://api.github.com/repos/cgwalters-forge/tracker/issues/5";
-const PLAN = "https://github.com/cgwalters-forge/tracker/issues/5#issuecomment-77";
-const RUN = "https://github.com/cgwalters-forge/runner/actions/runs/40";
+const ITEM = "jmarrero-forge/tracker#5";
+const ISSUE = "https://api.github.com/repos/jmarrero-forge/tracker/issues/5";
+const PLAN = "https://github.com/jmarrero-forge/tracker/issues/5#issuecomment-77";
+const RUN = "https://github.com/jmarrero-forge/runner/actions/runs/40";
 const POSTED = "2026-11-12T10:00:00Z";
 const record = (login: string, at: string, body = `<!-- agent-board-dispatch: 5@${at} -->\nDispatched [run](${RUN}).`) => ({ user: { login }, created_at: at, body });
 
@@ -16,8 +16,8 @@ interface Api { login?: string; state?: string; post?: number; records?: unknown
 
 function api(o: Api = {}) {
   const { fetchImpl, calls } = scriptedFetch((method, url) => {
-    if (url.endsWith("/user")) return { body: { login: o.login ?? "cgwalters" } };
-    if (method === "GET" && url === ISSUE) return { body: { state: o.state ?? "open", html_url: "https://github.com/cgwalters-forge/tracker/issues/5" } };
+    if (url.endsWith("/user")) return { body: { login: o.login ?? "jmarrero" } };
+    if (method === "GET" && url === ISSUE) return { body: { state: o.state ?? "open", html_url: "https://github.com/jmarrero-forge/tracker/issues/5" } };
     if (method === "POST" && url === `${ISSUE}/comments`) return { status: o.post ?? 201, body: o.post ? { message: "Refused" } : { html_url: PLAN } };
     if (url.endsWith("/issues/comments/77")) return { body: { created_at: POSTED } };
     if (url.startsWith(`${ISSUE}/comments?since=`)) return { body: o.records ?? [] };
@@ -46,8 +46,8 @@ function mount(o: Api & { view?: PassView; confirm?: boolean } = {}) {
 
 it("recordedRun takes only the pass's dispatch record made since the plan", () => {
   const since = Date.parse(POSTED);
-  assert.equal(recordedRun([record("cgwalters-bot", "2026-11-12T09:59:00Z"), record("someone", "2026-11-12T10:05:00Z"), record("cgwalters-bot", "2026-11-12T10:05:00Z", `Dispatched ${RUN}`)], since), undefined);
-  assert.equal(recordedRun([record("cgwalters-bot", "2026-11-12T10:05:00Z")], since), RUN);
+  assert.equal(recordedRun([record("jmarrero-bot", "2026-11-12T09:59:00Z"), record("someone", "2026-11-12T10:05:00Z"), record("jmarrero-bot", "2026-11-12T10:05:00Z", `Dispatched ${RUN}`)], since), undefined);
+  assert.equal(recordedRun([record("jmarrero-bot", "2026-11-12T10:05:00Z")], since), RUN);
 });
 
 it("asks first, posts the plan, then links the run once the pass records it", async () => {
@@ -63,7 +63,7 @@ it("asks first, posts the plan, then links the run once the pass records it", as
   assert.match((m.posts()[0]!.body as { body: string }).body,/"kind": "triage"[\s\S]*"brief": "Look into it"/);
   assert.equal(m.el().querySelector<HTMLAnchorElement>("a")!.href, PLAN);
   assert.match(m.el().textContent!, /not dispatched yet/);
-  records.push(record("cgwalters-bot", "2026-11-12T10:10:00Z"));
+  records.push(record("jmarrero-bot", "2026-11-12T10:10:00Z"));
   m.rerender();
   await settle();
   assert.equal(m.el().querySelectorAll("a")[1]!.getAttribute("href"), RUN);
@@ -85,11 +85,11 @@ it("stops checking for the dispatch record at its bound", async () => {
 it("a refused dispatch sends nothing more and can be corrected", async () => {
   const running = { in_flight: [{ state: "running", item: ITEM }] } as unknown as PassView;
   for (const [name, o, want] of [
-    ["GitHub's 422", { post: 422 }, /Not dispatching cgwalters-forge\/tracker#5: .*HTTP 422: Refused/],
-    ["GitHub's 403", { post: 403 }, /Not dispatching cgwalters-forge\/tracker#5: .*HTTP 403.*Issues write access/],
+    ["GitHub's 422", { post: 422 }, /Not dispatching jmarrero-forge\/tracker#5: .*HTTP 422: Refused/],
+    ["GitHub's 403", { post: 403 }, /Not dispatching jmarrero-forge\/tracker#5: .*HTTP 403.*Issues write access/],
     ["a closed item", { state: "closed" }, /it is closed, not open/],
-    ["another viewer", { login: "someone" }, /only cgwalters acts/],
-    ["an item the pass view lists running", { view: running }, /lists cgwalters-forge\/tracker#5 running/],
+    ["another viewer", { login: "someone" }, /only jmarrero acts/],
+    ["an item the pass view lists running", { view: running }, /lists jmarrero-forge\/tracker#5 running/],
   ] as const) {
     const m = mount(o);
     m.submit();

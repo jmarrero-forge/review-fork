@@ -228,7 +228,7 @@ mod tests {
                     assert_eq!(
                         q,
                         [
-                            ("scope".to_owned(), "cgwalters-forge".to_owned()),
+                            ("scope".to_owned(), "jmarrero-forge".to_owned()),
                             ("identity".to_owned(), "control-plane".to_owned())
                         ]
                     );
@@ -290,7 +290,7 @@ mod tests {
         let source = |refresh_after| {
             let mut sts = OctoSts::new(
                 &root,
-                "cgwalters-forge".into(),
+                "jmarrero-forge".into(),
                 "control-plane".into(),
                 file.clone(),
             )
@@ -316,7 +316,7 @@ mod tests {
         std::fs::write(&file, "stolen").unwrap();
         let err = format!("{:#}", expiring.token().await.unwrap_err());
         assert!(
-            err.ends_with("cgwalters-forge control-plane: HTTP 403: no matching trust policy"),
+            err.ends_with("jmarrero-forge control-plane: HTTP 403: no matching trust policy"),
             "{err}"
         );
         std::fs::write(&file, "").unwrap();
@@ -491,7 +491,7 @@ mod tests {
         let file = dir.path().join("token");
         let mut sts = OctoSts::new(
             &root,
-            "cgwalters-forge".into(),
+            "jmarrero-forge".into(),
             "control-plane".into(),
             file.clone(),
         )
