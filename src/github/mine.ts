@@ -14,7 +14,7 @@
 // bin/bot-pr.
 //
 // Writing with his token is an exception to the app's review-only role,
-// so it is kept narrow: only the bot's PRs within a jmarrero-forge fork,
+// so it is kept narrow: only the bot's PRs within a cgwalters-forge fork,
 // from a `bot/` branch; trees are never changed (each new commit is
 // checked against the old one); the ref moves only from the head he saw;
 // and nothing is written before he confirms the diff of the messages.
@@ -42,7 +42,7 @@ export const BRANCH_PREFIX = "bot/";
 /** Commits rewritten at most: more is a job for a checkout. */
 export const MAX_COMMITS = 50;
 /** The bot's trailer in PR bodies, which promote refuses in his text. */
-export const LLMS_TRAILER = "Generated-by: https://github.com/jmarrero-bot#llms";
+export const LLMS_TRAILER = "Generated-by: https://github.com/cgwalters/#llms";
 /**
  * bot-pr counts a `/promote` comment only if it is strictly later, to
  * the second, than the push: the latest of the fork's activity log entry
@@ -64,7 +64,7 @@ export function hasGeneratedBy(text: string): boolean {
 }
 
 /** The committer promote signs off as; the form starts with it. */
-export const DEFAULT_COMMITTER: Readonly<Identity> = { name: "Joseph Marrero Corchado", email: "jmarrero@redhat.com" };
+export const DEFAULT_COMMITTER: Readonly<Identity> = { name: "Colin Walters", email: "walters@verbum.org" };
 
 /** Where GitHub keeps workflows: pushing changes there needs the workflow scope. */
 export const WORKFLOWS_DIR = ".github/workflows/";
@@ -225,39 +225,6 @@ export function editProblems(d: PrDetail, edit: MineEdit, promote: boolean): str
     const m = normalizeMessage(edit.messages.get(c.sha) ?? c.message);
     if (!m.split("\n", 1)[0]?.trim()) out.push(`commit ${c.sha.slice(0, 10)} has no subject line`);
     if (hasGeneratedBy(m)) out.push(`commit ${c.sha.slice(0, 10)} still has a Generated-by line: the text must be yours`);
-  }
-  return out;
-}
-
-/** A line diff, for showing a message before and after. */
-export type DiffLine = { kind: "same" | "add" | "del"; text: string };
-
-export function lineDiff(before: string, after: string): DiffLine[] {
-  const a = before.replace(/\r\n?/g, "\n").trimEnd().split("\n");
-  const b = after.replace(/\r\n?/g, "\n").trimEnd().split("\n");
-  // Longest common subsequence; messages are short.
-  const lcs: number[][] = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
-  for (let i = a.length - 1; i >= 0; i--) {
-    for (let j = b.length - 1; j >= 0; j--) {
-      const row = lcs[i] as number[];
-      row[j] = a[i] === b[j] ? (lcs[i + 1]?.[j + 1] ?? 0) + 1 : Math.max(lcs[i + 1]?.[j] ?? 0, row[j + 1] ?? 0);
-    }
-  }
-  const out: DiffLine[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length || j < b.length) {
-    if (i < a.length && j < b.length && a[i] === b[j]) {
-      out.push({ kind: "same", text: a[i] as string });
-      i++;
-      j++;
-    } else if (j < b.length && (i >= a.length || (lcs[i]?.[j + 1] ?? 0) >= (lcs[i + 1]?.[j] ?? 0))) {
-      out.push({ kind: "add", text: b[j] as string });
-      j++;
-    } else {
-      out.push({ kind: "del", text: a[i] as string });
-      i++;
-    }
   }
   return out;
 }

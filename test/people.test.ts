@@ -8,13 +8,13 @@ import type { Recorded, Scripted } from "./helpers.ts";
 const data = JSON.parse(readFileSync(new URL("fixtures/people.json", import.meta.url), "utf8")) as { search: PeopleSubject[]; notifications: PeopleNotification[]; timelines: Record<string, PeopleEvent[]> };
 const now = Date.parse("2026-10-04T00:00:00Z");
 
-function client(options: { notificationsStatus?: number; searchStatus?: number; failedThread?: number; failedTimeline?: number; failedCI?: boolean; truncatedCI?: boolean; notifications?: PeopleNotification[]; paginated?: boolean; threads?: Record<number, { subject: Partial<PeopleSubject>; timeline: PeopleEvent[] }> } = {}) {
+function client(options: { notificationsStatus?: number; searchStatus?: number; searchPages?: Scripted[]; failedThread?: number; failedTimeline?: number; failedCI?: boolean; truncatedCI?: boolean; notifications?: PeopleNotification[]; paginated?: boolean; threads?: Record<number, { subject: Partial<PeopleSubject>; timeline: PeopleEvent[] }> } = {}) {
   const calls: Recorded[] = [];
   const route = (method: string, url: string): Scripted | undefined => {
     const path = new URL(url).pathname;
     // GitHub answers "mark a thread as read" with 205 and no body.
     if (method === "PATCH") return { status: 205 };
-    if (path === "/search/issues") return options.searchStatus ? { status: options.searchStatus } : { body: { items: data.search } };
+    if (path === "/search/issues") return options.searchPages?.[Number(new URL(url).searchParams.get("page")) - 1] ?? (options.searchStatus ? { status: options.searchStatus } : { body: { items: data.search } });
     if (path === "/notifications") {
       if (options.notificationsStatus) return { status: options.notificationsStatus, body: { message: "notifications denied" } };
       const notifications = options.notifications ?? data.notifications;
@@ -29,7 +29,7 @@ function client(options: { notificationsStatus?: number; searchStatus?: number; 
       if (n === options.failedThread) return { status: 404 };
       const thread = options.threads?.[n];
       if (thread) return { body: { number: n, title: `Thread ${n}`, ...thread.subject } };
-      return { body: data.search.find((s) => s.number === n) ?? { number: n, title: `Thread ${n}`, user: { login: "jmarrero-bot", type: "User" }, ...(n === 12 ? { pull_request: {} } : {}) } };
+      return { body: data.search.find((s) => s.number === n) ?? { number: n, title: `Thread ${n}`, user: { login: "cgwalters-bot", type: "User" }, ...(n === 12 ? { pull_request: {} } : {}) } };
     }
     if (/\/pulls\/\d+$/.test(path)) return { body: { head: { sha: "abc" } } };
     if (path.endsWith("/check-runs")) return options.failedCI ? { status: 403 } : { body: { total_count: options.truncatedCI ? 101 : 1, check_runs: [{ name: "test", status: "completed", conclusion: "success" }] } };
@@ -49,6 +49,33 @@ function client(options: { notificationsStatus?: number; searchStatus?: number; 
 }
 
 describe("From people loader", () => {
+  for (const failure of [{ status: 403 }, { status: 500 }, { body: {} }]) {
+    for (const notifications of [false, true]) it(`retains earlier review requests after a later search page fails (${JSON.stringify(failure)}, notifications=${notifications})`, async () => {
+      const { gh, calls } = client({ searchPages: [{ body: { items: Array(100).fill(data.search[0]) } }, failure] });
+      const people = await loadPeople(gh, now, notifications);
+      const request = people.rows.find((r) => r.key === "upstream/widget#1");
+      assert.ok(request);
+      assert.equal(request.reviewRequested, true);
+      assert.equal(request.action, "Review");
+      assert.equal(request.ci, "success");
+      assert.deepEqual(request.notificationIds, notifications ? ["101"] : []);
+      assert.match(people.warnings.join(" "), /Review-request search unavailable/);
+      assert.equal(calls.filter((c) => new URL(c.url).pathname === "/search/issues").length, 2);
+      assert.ok(calls.every((c) => c.method === "GET"));
+    });
+  }
+
+  it("continues through successful search pages and deduplicates overlapping requests", async () => {
+    const { gh, calls } = client({ searchPages: [
+      { body: { items: Array(100).fill(data.search[0]) } },
+      { body: { items: [data.search[0], { ...data.search[0], number: 2, html_url: "https://github.com/upstream/widget/pull/2" }] } },
+    ] });
+    const people = await loadPeople(gh, now, false);
+    assert.deepEqual(people.rows.map((r) => r.key), ["upstream/widget#1", "upstream/widget#2"]);
+    assert.deepEqual(people.warnings, []);
+    assert.equal(calls.filter((c) => new URL(c.url).pathname === "/search/issues").length, 2);
+  });
+
   it("merges human review search with recent participating asks, excluding bot-only and unknown activity", async () => {
     const { gh, calls } = client();
     const people = await loadPeople(gh, now);
@@ -57,7 +84,7 @@ describe("From people loader", () => {
     assert.deepEqual(people.rows.map((r) => r.ci), ["success", "success", "n/a"]);
     assert.deepEqual(people.rows[0]?.notificationIds, ["101"]);
     assert.equal(people.rows[0]?.requestedAt, "2026-10-02T00:00:00Z");
-    assert.equal(people.rows[2]?.author, "jmarrero-bot", "a bot-authored thread with a human ask still counts");
+    assert.equal(people.rows[2]?.author, "cgwalters-bot", "a bot-authored thread with a human ask still counts");
     assert.deepEqual(people.warnings, []);
     const search = new URL(calls.find((c) => c.url.includes("/search/issues"))!.url);
     assert.equal(search.searchParams.get("q"), PEOPLE_QUERY);
@@ -144,18 +171,18 @@ describe("From people loader", () => {
 
   it("finds mentions in an opening body and inline review comments, and lists unlocated mentions", async () => {
     const alice = { login: "alice", type: "User" };
-    const bot = { login: "jmarrero-bot", type: "User" };
+    const bot = { login: "cgwalters-bot", type: "User" };
     const mention = (n: number): PeopleNotification => ({ ...data.notifications[1]!, id: String(200 + n), subject: { type: "Issue", url: `https://api.github.com/repos/upstream/widget/issues/${n}` } });
     const threads = {
       // The mention is in the issue body; the timeline has no event for it.
-      20: { subject: { user: alice, body: "@jmarrero, is this the right approach?", created_at: "2026-10-01T00:00:00Z" }, timeline: [] },
+      20: { subject: { user: alice, body: "@cgwalters, is this the right approach?", created_at: "2026-10-01T00:00:00Z" }, timeline: [] },
       // An inline review comment is a line-commented event with comments[].
-      21: { subject: { user: bot, body: "Automated PR", pull_request: {} }, timeline: [{ event: "line-commented", comments: [{ user: alice, body: "@jmarrero see this line", created_at: "2026-10-02T12:00:00Z" }] }] },
+      21: { subject: { user: bot, body: "Automated PR", pull_request: {} }, timeline: [{ event: "line-commented", comments: [{ user: alice, body: "@cgwalters see this line", created_at: "2026-10-02T12:00:00Z" }] }] },
       // Nothing read mentions the operator: listed, not hidden.
       22: { subject: { user: alice, body: "no mention here" }, timeline: [] },
       // Located but from a bot, or before the window: still dropped.
-      23: { subject: { user: bot, body: "@jmarrero bot body", created_at: "2026-10-02T00:00:00Z" }, timeline: [] },
-      24: { subject: { user: alice, body: "@jmarrero old body", created_at: "2026-09-01T00:00:00Z" }, timeline: [{ event: "line-commented", comments: [{ user: bot, body: "@jmarrero bot line", created_at: "2026-10-02T00:00:00Z" }] }] },
+      23: { subject: { user: bot, body: "@cgwalters bot body", created_at: "2026-10-02T00:00:00Z" }, timeline: [] },
+      24: { subject: { user: alice, body: "@cgwalters old body", created_at: "2026-09-01T00:00:00Z" }, timeline: [{ event: "line-commented", comments: [{ user: bot, body: "@cgwalters bot line", created_at: "2026-10-02T00:00:00Z" }] }] },
     };
     const { gh } = client({ notifications: [20, 21, 22, 23, 24].map(mention), threads, searchStatus: 500 });
     const people = await loadPeople(gh, now);
@@ -175,10 +202,10 @@ describe("From people loader", () => {
 
   it("requires exact mentions and operator-targeted human review requests", () => {
     const base = { event: "commented", user: { login: "alice", type: "User" } };
-    assert.equal(humanAsk({ ...base, body: "@jmarrero-other" }, "mention"), false);
-    assert.equal(humanAsk({ ...base, body: "@JMARRERO hello" }, "mention"), true);
+    assert.equal(humanAsk({ ...base, body: "@cgwalters-other" }, "mention"), false);
+    assert.equal(humanAsk({ ...base, body: "@CGWALTERS hello" }, "mention"), true);
     assert.equal(humanAsk({ event: "review_requested", actor: base.user, requested_reviewer: { login: "other" } }, "review_requested"), false);
-    assert.equal(humanAsk({ ...base, event: "committed", body: "@jmarrero" }, "mention"), false);
+    assert.equal(humanAsk({ ...base, event: "committed", body: "@cgwalters" }, "mention"), false);
   });
 
   it("marks only the notification read and invalidates notification response caches", async () => {

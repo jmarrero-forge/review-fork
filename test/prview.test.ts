@@ -4,7 +4,9 @@
 // the bot keys on.
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { JSDOM, VirtualConsole } from "jsdom";
 import type { DraftComment, ReviewAction } from "../src/github/forge.ts";
 import type { GuideState } from "../src/github/guide.ts";
 import type { PrDetail } from "../src/github/prs.ts";
@@ -13,7 +15,7 @@ import { buildTree, canReview, hotspotsFor, movedFrom, type PrViewHandlers, prVi
 import type { Entry } from "../src/github/queue.ts";
 import type { PrWait } from "../src/github/waiting.ts";
 import { createRenderer } from "../src/markdown.ts";
-import { installDom } from "./helpers.ts";
+import { fields, installDom } from "./helpers.ts";
 
 const win = installDom();
 const render = createRenderer(win as unknown as Parameters<typeof createRenderer>[0]);
@@ -25,11 +27,11 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 
 function detail(over: Partial<PrDetail> = {}): PrDetail {
   return {
-    ref: { owner: "jmarrero-forge", repo: "widget", number: 7 },
-    url: "https://github.com/jmarrero-forge/widget/pull/7",
+    ref: { owner: "cgwalters-forge", repo: "widget", number: 7 },
+    url: "https://github.com/cgwalters-forge/widget/pull/7",
     title: `widget: ${EVIL}`,
     body: `Why ${EVIL}\n\n<!-- bot-meta -->\n- Upstream: \`up/widget\`, base \`main\`\n- Board item: \`PVTI_x\`\n<!-- /bot-meta -->`,
-    author: "jmarrero-bot",
+    author: "cgwalters-bot",
     state: "open",
     draft: true,
     head: HEAD,
@@ -40,8 +42,8 @@ function detail(over: Partial<PrDetail> = {}): PrDetail {
     changedFiles: 2,
     commitCount: 2,
     commits: [
-      { sha: C1, parent: BASE, url: "javascript:alert(3)", message: `first ${EVIL}`, author: "jmarrero-bot" },
-      { sha: HEAD, parent: C1, url: "javascript:alert(3)", message: `subject ${EVIL}\n\nbody line ${EVIL}`, author: "jmarrero-bot" },
+      { sha: C1, parent: BASE, url: "javascript:alert(3)", message: `first ${EVIL}`, author: "cgwalters-bot" },
+      { sha: HEAD, parent: C1, url: "javascript:alert(3)", message: `subject ${EVIL}\n\nbody line ${EVIL}`, author: "cgwalters-bot" },
     ],
     files: [
       { filename: `src/${EVIL}.rs`, sha: "f".repeat(40), status: "modified", additions: 2, deletions: 1, patch: `@@ -1,2 +1,3 @@\n ctx\n-${EVIL} old\n+${EVIL} new\n+more` },
@@ -87,6 +89,7 @@ const codeRows = (root: Element) =>
 describe("prView", () => {
   it("shows untrusted text as text, and drops the bot-meta section", () => {
     const { el } = pane(detail());
+    assert.equal(el.querySelector("button.item-chat"), null);
     assertNoActiveContent(el);
     const text = el.textContent ?? "";
     assert.ok(text.includes(`widget: ${EVIL}`));
@@ -105,7 +108,7 @@ describe("prView", () => {
     assert.match(text, /No diff to show/);
     const links = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     assert.ok(links.includes("https://github.com/up/widget"));
-    assert.ok(links.includes("https://github.com/up/widget/compare/main...jmarrero-forge:widget:bot/fix"));
+    assert.ok(links.includes("https://github.com/up/widget/compare/main...cgwalters-forge:widget:bot/fix"));
   });
 
   it("colors code by language", () => {
@@ -249,7 +252,7 @@ describe("prView", () => {
     click("request-changes");
     await tick();
     assert.deepEqual(got, [["approve", "LGTM", true], ["request-changes", "nit", false]]);
-    assert.match(confirms[0] ?? "", /^Approve \(with \/draft\) jmarrero-forge\/widget#7 at eeeeeeeeee\? Not seen here: 1 without a diff here\.$/);
+    assert.match(confirms[0] ?? "", /^Approve \(with \/draft\) cgwalters-forge\/widget#7 at eeeeeeeeee\? Not seen here: 1 without a diff here\.$/);
     assert.match(confirms[2] ?? "", /You already reviewed it from here/);
     assert.match(el.querySelector("form.review .status")?.textContent ?? "", /^Sent: /);
   });
@@ -286,7 +289,7 @@ describe("prView", () => {
     const mem = new Map<string, string>();
     const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) };
     Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
-    storage.setItem("review.drafts.jmarrero-forge/widget#7", JSON.stringify([
+    storage.setItem("review.drafts.cgwalters-forge/widget#7", JSON.stringify([
       { path: "a.rs", line: 1, side: "RIGHT", body: `old thought ${EVIL}`, commit: gone },
       { path: `src/${EVIL}.rs`, line: 3, side: "RIGHT", body: "kept", commit: HEAD },
     ]));
@@ -300,7 +303,7 @@ describe("prView", () => {
     assert.deepEqual(sentWith.map((c) => c.body), ["kept"]);
     p.el.querySelector<HTMLButtonElement>("details.orphans button")?.click();
     assert.equal(p.el.querySelector<HTMLElement>("details.orphans")?.hidden, true);
-    assert.deepEqual(JSON.parse(mem.get("review.drafts.jmarrero-forge/widget#7") ?? "null"), null, "all sent or discarded");
+    assert.deepEqual(JSON.parse(mem.get("review.drafts.cgwalters-forge/widget#7") ?? "null"), null, "all sent or discarded");
     Reflect.deleteProperty(globalThis, "localStorage");
   });
 
@@ -360,7 +363,7 @@ describe("prView", () => {
   it("offers a review form only for the bot's PRs in its own space", () => {
     const cases: [Partial<PrDetail>, boolean][] = [
       [{}, true],
-      [{ ref: { owner: "jmarrero-bot", repo: "sandbox", number: 1 } }, true],
+      [{ ref: { owner: "cgwalters-bot", repo: "sandbox", number: 1 } }, true],
       [{ ref: { owner: "bootc-dev", repo: "bootc", number: 1 } }, false],
       [{ author: "someone" }, false],
     ];
@@ -432,8 +435,8 @@ describe("prView", () => {
   describe("a PR a review ask names", () => {
     const UP = { owner: "bootc-dev", repo: "bootc", number: 2500 };
     const ASKED = "a".repeat(40);
-    const upstream = (over: Partial<PrDetail> = {}) => detail({ ref: UP, url: "https://github.com/bootc-dev/bootc/pull/2500", author: "jmarrero-bot", body: "fix", draft: false, head: ASKED, ...over });
-    const ask: ReviewAskInfo = { pr: UP, issue: { owner: "jmarrero-forge", repo: "tracker", number: 24 }, issueUrl: "https://github.com/jmarrero-forge/tracker/issues/24", head: ASKED, text: "Re-approve" };
+    const upstream = (over: Partial<PrDetail> = {}) => detail({ ref: UP, url: "https://github.com/bootc-dev/bootc/pull/2500", author: "cgwalters-bot", body: "fix", draft: false, head: ASKED, ...over });
+    const ask: ReviewAskInfo = { pr: UP, issue: { owner: "cgwalters-forge", repo: "tracker", number: 24 }, issueUrl: "https://github.com/cgwalters-forge/tracker/issues/24", head: ASKED, text: "Re-approve" };
     const askPane = (d: PrDetail, a: ReviewAskInfo | undefined, h: PrViewHandlers = handlers()) => {
       const p = prView(d, undefined, render, h, a ? { reviewedHere: false, ask: a } : opts);
       win.document.body.replaceChildren(p.el);
@@ -460,8 +463,8 @@ describe("prView", () => {
       const { el } = askPane(upstream(), ask);
       const banner = el.querySelector(".review-ask p");
       assert.equal(banner?.className, "note");
-      assert.match(banner?.textContent ?? "", /The bot asks you to review this at aaaaaaaaaa \(jmarrero-forge\/tracker#24: Re-approve\)\. That is still its head\./);
-      assert.match(el.querySelector("form.review .target")?.textContent ?? "", /also comments on jmarrero-forge\/tracker#24/);
+      assert.match(banner?.textContent ?? "", /The bot asks you to review this at aaaaaaaaaa \(cgwalters-forge\/tracker#24: Re-approve\)\. That is still its head\./);
+      assert.match(el.querySelector("form.review .target")?.textContent ?? "", /also comments on cgwalters-forge\/tracker#24/);
       assert.equal(movedFrom(upstream(), ask), undefined);
     });
 
@@ -524,9 +527,9 @@ describe("the review guide", () => {
   const guideState = (over: Partial<GuideState> = {}): GuideState =>
     ({
       state: "current",
-      url: "https://github.com/jmarrero-forge/widget/pull/7#pullrequestreview-1",
+      url: "https://github.com/cgwalters-forge/widget/pull/7#pullrequestreview-1",
       guide: {
-        repo: "jmarrero-forge/widget",
+        repo: "cgwalters-forge/widget",
         pr: 7,
         head: HEAD,
         summary: `Summary ${EVIL}`,
@@ -643,4 +646,84 @@ describe("pane helpers", () => {
     assert.equal(unseenNote({ unopened: names, noDiff: 0, truncated: false }), " Not seen here: 8 files never expanded (f0, f1, f2, f3, f4, f5, +2 more).");
     assert.equal(unseenNote({ unopened: [], noDiff: 0, truncated: false }), "");
   });
+});
+
+// Exercise the real entry point with a PR ready before the publication, not just prView.
+for (const fails of [false, true]) it(`preserves unsent PR reviews when the publication ${fails ? "fails" : "loads"} late`, async () => {
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on("jsdomError", (error: Error) => {
+    if (!error.message.startsWith("Not implemented: navigation")) throw error;
+  });
+  const dom = new JSDOM(readFileSync(new URL("../static/index.html", import.meta.url), "utf8"), {
+    url: "https://review.example/#pr/cgwalters-forge/widget/7", pretendToBeVisual: true, virtualConsole,
+  });
+  const { window } = dom;
+  window.scrollTo = () => {};
+  let releaseQueue = () => {};
+  const queueReady = new Promise<void>((resolve) => { releaseQueue = resolve; });
+  let queueFinished = false;
+  const requests: string[] = [];
+  Object.assign(globalThis, {
+    window, document: window.document, Node: window.Node, HTMLElement: window.HTMLElement,
+    ResizeObserver: class { observe() {} disconnect() {} },
+    fetch: async (input: string) => {
+      const path = new URL(input).pathname;
+      requests.push(path);
+      if (path === "/repos/cgwalters-forge/bot-ops/issues/1/comments") {
+        await queueReady;
+        queueFinished = true;
+        if (fails) return Response.json({ message: "Queue unavailable" }, { status: 503 });
+      }
+      let body: unknown = [];
+      if (path === "/user") body = { login: "cgwalters" };
+      else if (path.endsWith("/fields")) body = fields();
+      else if (path === "/search/issues") body = { items: [], total_count: 0 };
+      else if (path === "/graphql") body = { data: {} };
+      else if (path === "/repos/cgwalters-forge/widget/pulls/7") body = {
+        number: 7, html_url: "https://github.com/cgwalters-forge/widget/pull/7", title: "widget: Fix it", body: "Body", draft: true, state: "open",
+        user: { login: "cgwalters-bot" }, head: { sha: HEAD, ref: "bot/fix" }, base: { ref: "main" }, additions: 1, deletions: 1, changed_files: 1, commits: 1,
+      };
+      else if (path.endsWith("/pulls/7/commits")) body = [{ sha: HEAD, commit: { message: "Fix it" }, parents: [{ sha: BASE }], author: { login: "cgwalters-bot" } }];
+      else if (path.endsWith("/pulls/7/files")) body = [{ filename: "a.rs", status: "modified", additions: 1, deletions: 1, patch: "@@ -1 +1 @@\n-old\n+new" }];
+      else if (path.endsWith("/check-runs")) body = { check_runs: [] };
+      else if (path.endsWith("/status")) body = { statuses: [] };
+      else if (path === "/repos/cgwalters-forge/widget") body = {};
+      return Response.json(body);
+    },
+  });
+  const until = async (check: () => boolean) => {
+    for (let i = 0; i < 200; i++) {
+      if (check()) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.fail(`Timed out: ${window.document.querySelector("#view")?.textContent}`);
+  };
+  try {
+    await import(`../src/github/main.ts?early-pr=${fails}`);
+    await until(() => !!window.document.querySelector(".signin"));
+    window.document.querySelector<HTMLInputElement>(".signin input[type=password]")!.value = ["ghp", "x".repeat(24)].join("_");
+    window.document.querySelector(".signin")!.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    await until(() => !!window.document.querySelector("form.review textarea"));
+    assert.equal(queueFinished, false);
+    const review = window.document.querySelector<HTMLTextAreaElement>("form.review textarea")!;
+    review.value = "Keep this unsent review";
+    window.document.querySelectorAll<HTMLElement>("tr.add td.ln")[1]!.click();
+    const inline = window.document.querySelector<HTMLTextAreaElement>("tr.composer textarea")!;
+    assert.ok(inline);
+    inline.value = "Keep this unsent inline comment";
+    releaseQueue();
+    await until(() => queueFinished);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(window.document.querySelector("form.review textarea"), review);
+    assert.equal(review.value, "Keep this unsent review");
+    assert.equal(window.document.querySelector("tr.composer textarea"), inline);
+    assert.equal(inline.value, "Keep this unsent inline comment");
+    assert.ok(!requests.some((path) => path.includes("/actions/") || path.endsWith("/events")), "no removed workflow or activity polling");
+    assert.ok(!requests.some((path) => path.endsWith("/items") || path === "/search/issues"), "no background board or search discovery");
+  } finally {
+    releaseQueue();
+    window.document.querySelector<HTMLButtonElement>("#signout")?.click();
+    await tick();
+    dom.window.close();
+  }
 });

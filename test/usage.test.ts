@@ -28,7 +28,7 @@ describe("findUsage", () => {
         { name: "ops-v2", tokens: { input: 20, output: 60000, cacheRead: 4000000, cacheWrite: 150000 } },
         { name: "bootc-2482", tokens: { input: 10, output: 9000, cacheRead: 800000, cacheWrite: 90000 } },
       ],
-      commentUrl: "https://github.com/jmarrero-forge/bot-ops/issues/1#issuecomment-2",
+      commentUrl: "https://github.com/cgwalters-forge/bot-ops/issues/1#issuecomment-2",
     });
   });
   it("finds nothing among others' comments", () => assert.equal(findUsage(comments().slice(0, 1)), undefined));
@@ -37,11 +37,12 @@ describe("findUsage", () => {
   it("reads the comment edited last, dated by its edit, whatever the order", () => {
     for (const list of [snapshot(), snapshot().reverse()]) {
       const u = findUsage(list);
-      assert.equal(u?.commentUrl, "https://github.com/jmarrero-forge/bot-ops/issues/1#issuecomment-11");
+      assert.equal(u?.commentUrl, "https://github.com/cgwalters-forge/bot-ops/issues/1#issuecomment-11");
       assert.equal(u?.updatedAt, "2026-10-18T14:42:00Z");
       assert.deepEqual(u?.windows, []);
-      assert.deepEqual(u?.pools?.claude, { usedPercent: 73, allowedPercent: 73.2, resetsAt: "2026-10-19T23:00:00.000Z", observedAt: "2026-10-18T14:40:00.000Z", hold: false, windowMinutes: 10080 });
-      assert.deepEqual([u?.pools?.openai?.usedPercent, u?.pools?.openai?.hold], [1, false]);
+      // Older than limit_percent: no limit, not one worked out from burst and target.
+      assert.deepEqual(u?.pools?.claude, { hold: false, burst: 3, reading: { usedPercent: 73, allowedPercent: 73.2, resetsAt: "2026-10-19T23:00:00.000Z", observedAt: "2026-10-18T14:40:00.000Z", windowMinutes: 10080 } });
+      assert.deepEqual([u?.pools?.openai?.reading?.usedPercent, u?.pools?.openai?.hold], [1, false]);
       assert.deepEqual(u?.mistral?.allowance, { limitUsd: 300, resetsAt: "2026-11-01T00:00:00Z", spentUsd: 41.25, estimated: false, unpriced: [], lowerBound: false });
     }
   });
@@ -51,6 +52,15 @@ describe("findUsage", () => {
     const { updated_at: _, ...undated } = old!;
     assert.equal(findUsage([undated])?.updatedAt, "2026-10-15T17:42:00Z");
     assert.equal(findUsage([{ ...old!, updated_at: "yesterday" }])?.updatedAt, "2026-10-15T17:42:00Z", "a malformed edit time is ignored");
+  });
+  it("keeps every pool the pass publishes, with its decision, reason and limit", () => {
+    // As agent-board's pass/usage.rs writes it: a paced pool, one held for want of a reading, and a newer pool held on pace.
+    const u = findUsage(fixture<RawComment[]>("usage-pass.json"));
+    assert.deepEqual(u?.pools, {
+      claude: { hold: false, limitPercent: 43.2, burst: 3, reading: { usedPercent: 41, allowedPercent: 40.2, resetsAt: "2026-10-30T23:00:00Z", observedAt: "2026-10-26T03:05:00Z", windowMinutes: 10080 } },
+      openai: { hold: true, reason: "no-reading" },
+      fable: { hold: true, reason: "pace", nextDispatchAt: "2026-10-27T05:42:00Z", limitPercent: 43.2, burst: 3, reading: { usedPercent: 52, allowedPercent: 40.2, resetsAt: "2026-10-30T23:00:00Z", observedAt: "2026-10-26T03:05:00Z", windowMinutes: 10080 } },
+    });
   });
 });
 
@@ -70,14 +80,21 @@ describe("parseUsage", () => {
     }
   });
 
-  it("accepts pool-only publications and drops malformed pools independently", () => {
+  it("accepts pool-only publications; a pool without a decision is dropped, one without a whole reading keeps its decision", () => {
     const raw = fixture<{ pools: Record<string, Record<string, unknown>> }>("usage-pools.json");
-    assert.equal(parseUsage(body(raw))?.pools?.openai?.usedPercent, 80);
-    for (const edit of [{ used_percent: -1 }, { allowed_percent: "30" }, { resets_at: "soon" }, { observed_at: null }, { hold: "true" }]) {
-      const parsed = parseUsage(body({ ...raw, pools: { ...raw.pools, openai: { ...raw.pools.openai, ...edit } } }));
-      assert.equal(parsed?.pools?.openai, undefined);
-      assert.equal(parsed?.pools?.claude?.usedPercent, 42);
+    assert.equal(parseUsage(body(raw))?.pools?.openai?.reading?.usedPercent, 80);
+    const openai = (edit: Record<string, unknown>) => parseUsage(body({ ...raw, pools: { ...raw.pools, openai: { ...raw.pools.openai, ...edit } } }))?.pools;
+    for (const edit of [{ hold: "true" }, { hold: undefined }]) {
+      assert.equal(openai(edit)?.openai, undefined);
+      assert.equal(openai(edit)?.claude?.reading?.usedPercent, 42);
     }
+    for (const edit of [{ used_percent: -1 }, { allowed_percent: "30" }, { resets_at: "soon" }, { observed_at: null }]) {
+      assert.deepEqual(openai(edit)?.openai, { hold: true, reason: "pace", nextDispatchAt: "2026-10-13T00:57:18.315Z", burst: 3 }, JSON.stringify(edit));
+    }
+    // A reason only for a held pool, and only a word; a name that is no pool's is dropped.
+    assert.equal(openai({ reason: "<b>pace</b>" })?.openai?.reason, undefined);
+    assert.equal(parseUsage(body({ ...raw, pools: { ...raw.pools, claude: { ...raw.pools.claude, reason: "pace" } } }))?.pools?.claude?.reason, undefined);
+    assert.deepEqual(Object.keys(parseUsage(body({ ...raw, pools: { ...raw.pools, "../x": raw.pools.claude } }))?.pools ?? {}), ["claude", "openai"]);
   });
 
   it("keeps a held pool's next dispatch time, and none for a bad time or an unheld pool", () => {
@@ -86,7 +103,7 @@ describe("parseUsage", () => {
     assert.equal(openai({})?.nextDispatchAt, "2026-10-13T00:57:18.315Z");
     for (const edit of [{ next_dispatch_at: "soon" }, { next_dispatch_at: null }, { hold: false }]) {
       const pool = openai(edit);
-      assert.equal(pool?.usedPercent, 80, JSON.stringify(edit));
+      assert.equal(pool?.reading?.usedPercent, 80, JSON.stringify(edit));
       assert.equal(pool?.nextDispatchAt, undefined, JSON.stringify(edit));
     }
   });
@@ -168,11 +185,11 @@ describe("runs in the snapshot", () => {
     const u = parseUsage(body(raw()));
     assert.equal(u?.runs?.length, 5);
     assert.deepEqual(u?.runs?.[0], {
-      repository: "jmarrero-forge/review", runId: 19876543210, pool: "claude", kind: "implement", item: "jmarrero-forge/review#99",
+      repository: "cgwalters-forge/review", runId: 19876543210, pool: "claude", kind: "implement", item: "cgwalters-forge/review#99",
       finishedAt: "2026-10-18T13:30:00Z", requests: 412, tokens: { input: 120000, output: 310000, cacheRead: 41000000, cacheWrite: 2600000 },
     });
-    assert.deepEqual(u?.runs?.[3], { repository: "jmarrero-forge/agentic-job", runId: 19876543213, pool: "mistral", finishedAt: "2026-10-18T02:00:00Z", tokens: { input: 500000, output: 20000, cacheRead: 0, cacheWrite: 0 } });
-    assert.equal(u?.pools?.claude?.usedPercent, 73, "the pools are read as before");
+    assert.deepEqual(u?.runs?.[3], { repository: "cgwalters-forge/agentic-job", runId: 19876543213, pool: "mistral", finishedAt: "2026-10-18T02:00:00Z", tokens: { input: 500000, output: 20000, cacheRead: 0, cacheWrite: 0 } });
+    assert.equal(u?.pools?.claude?.reading?.usedPercent, 73, "the pools are read as before");
   });
   it("tells no runs list from an empty one", () => {
     const { runs: _, ...without } = raw();
@@ -182,7 +199,7 @@ describe("runs in the snapshot", () => {
   });
   it("drops a malformed run, not the list", () => {
     for (const bad of [
-      { repository: "review" }, { repository: "jmarrero-forge/.." }, { repository: "<b>/x" }, { run_id: "19876543210" }, { run_id: 1.5 }, { run_id: 0 }, { pool: "Claude" }, { pool: "<b>" },
+      { repository: "review" }, { repository: "cgwalters-forge/.." }, { repository: "<b>/x" }, { run_id: "19876543210" }, { run_id: 1.5 }, { run_id: 0 }, { pool: "Claude" }, { pool: "<b>" },
       { finished_at: "yesterday" }, { finished_at: undefined }, { tokens: { input: 1, output: 2, cache_read: 3 } }, { tokens: { input: -1, output: 2, cache_read: 3, cache_write: 4 } },
     ]) {
       assert.deepEqual(runs(bad), [], JSON.stringify(bad));
@@ -190,11 +207,11 @@ describe("runs in the snapshot", () => {
     assert.equal(parseUsage(body({ ...raw(), runs: [{ ...raw().runs[0], pool: "<b>" }, raw().runs[1]] }))?.runs?.length, 1);
   });
   it("counts a run listed twice once, by repository and run id", () => {
-    const twice = parseUsage(body({ ...raw(), runs: [raw().runs[0], { ...raw().runs[0], kind: "review" }, { ...raw().runs[0], repository: "jmarrero-forge/tracker" }] }))?.runs;
-    assert.deepEqual(twice?.map((r) => [r.repository, r.kind]), [["jmarrero-forge/review", "implement"], ["jmarrero-forge/tracker", "implement"]]);
+    const twice = parseUsage(body({ ...raw(), runs: [raw().runs[0], { ...raw().runs[0], kind: "review" }, { ...raw().runs[0], repository: "cgwalters-forge/tracker" }] }))?.runs;
+    assert.deepEqual(twice?.map((r) => [r.repository, r.kind]), [["cgwalters-forge/review", "implement"], ["cgwalters-forge/tracker", "implement"]]);
   });
   it("leaves out a kind, item or request count it can't read, keeping the run", () => {
-    for (const edit of [{ kind: "<img src=x>" }, { item: "jmarrero-forge/review" }, { item: "jmarrero-forge/review#0" }, { item: "../x#1" }, { requests: -1 }, { requests: "4" }]) {
+    for (const edit of [{ kind: "<img src=x>" }, { item: "cgwalters-forge/review" }, { item: "cgwalters-forge/review#0" }, { item: "../x#1" }, { requests: -1 }, { requests: "4" }]) {
       const [run] = runs(edit) ?? [];
       assert.ok(run, JSON.stringify(edit));
       const field = Object.keys(edit)[0] as "kind" | "item" | "requests";
@@ -219,9 +236,9 @@ describe("spendByRun", () => {
       { name: UNKNOWN_KIND, tokens: 520000, runs: 1 },
     ]);
     assert.deepEqual(spend.byRepository, [
-      { name: "jmarrero-forge/review", tokens: 52300000, runs: 2 },
-      { name: "jmarrero-forge/tracker", tokens: 3129000, runs: 1 },
-      { name: "jmarrero-forge/agentic-job", tokens: 520000, runs: 1 },
+      { name: "cgwalters-forge/review", tokens: 52300000, runs: 2 },
+      { name: "cgwalters-forge/tracker", tokens: 3129000, runs: 1 },
+      { name: "cgwalters-forge/agentic-job", tokens: 520000, runs: 1 },
     ]);
   });
   it("leaves out a run dated after now, and finds nothing a day later", () => {
@@ -238,7 +255,7 @@ describe("loadUsage", () => {
   };
   it("reads the private repository's issue", async () => {
     const { data, path } = await load(200);
-    assert.equal(path, "/repos/jmarrero-forge/bot-ops/issues/1/comments");
+    assert.equal(path, "/repos/cgwalters-forge/bot-ops/issues/1/comments");
     assert.equal(!(data instanceof Error) && data.state, "ok");
   });
   it("says when none is published", async () => assert.deepEqual((await load(200, [])).data, { state: "none" }));
@@ -247,7 +264,7 @@ describe("loadUsage", () => {
 });
 
 describe("poolPace", () => {
-  const pool = { usedPercent: 50, allowedPercent: 7.5, hold: true, windowMinutes: 10080, observedAt: "2026-10-16T01:05:00Z", resetsAt: "2026-10-22T11:52:00Z" };
+  const pool = { usedPercent: 50, allowedPercent: 7.5, windowMinutes: 10080, observedAt: "2026-10-16T01:05:00Z", resetsAt: "2026-10-22T11:52:00Z" };
   it("measures the share gone from the pool's own reset, and projects to its end", () => {
     // The panel of 16 Oct: OpenAI's week reset at 11:52 on 15 Oct, so 13 hours of 168 were gone.
     const pace = poolPace(pool);
@@ -262,7 +279,7 @@ describe("poolPace", () => {
   });
   it("reads window_minutes, a week when absent or nonsense", () => {
     const raw = fixture<{ pools: Record<string, Record<string, unknown>> }>("usage-pools.json");
-    const minutes = (v: unknown) => parseUsage(body({ ...raw, pools: { claude: { ...raw.pools.claude, window_minutes: v } } }))?.pools?.claude?.windowMinutes;
+    const minutes = (v: unknown) => parseUsage(body({ ...raw, pools: { claude: { ...raw.pools.claude, window_minutes: v } } }))?.pools?.claude?.reading?.windowMinutes;
     assert.deepEqual([minutes(300), minutes(undefined), minutes(0), minutes(-5), minutes("300"), minutes(1e9)], [300, 10080, 10080, 10080, 10080, 10080]);
   });
 });
@@ -279,8 +296,8 @@ describe("Mistral's allowance from the pools file", () => {
     assert.equal(parseBudget("not json", now), undefined);
   });
   it("reads it after the snapshot, one conditional GET, only for a Mistral row without an allowance of its own", async () => {
-    assert.deepEqual(USAGE_CONFIG.mistralAllowance, { repo: "jmarrero-forge/tracker", path: ".github/agentic-job/pools.json" });
-    const snapshot = (mistral: unknown) => [{ user: { login: "jmarrero-bot" }, body: body({ ...fixture<object>("usage-pools.json"), mistral }) }];
+    assert.deepEqual(USAGE_CONFIG.mistralAllowance, { repo: "cgwalters-forge/tracker", path: ".github/agentic-job/pools.json" });
+    const snapshot = (mistral: unknown) => [{ user: { login: "cgwalters-bot" }, body: body({ ...fixture<object>("usage-pools.json"), mistral }) }];
     const run = async (mistral: unknown, target: { repo: string; path: string } | null = { repo: "example/tracker", path: ".github/agentic-job/pools.json" }) => {
       const { fetchImpl, calls } = scriptedFetch((_m, url) => url.endsWith(usagePath) ? { body: snapshot(mistral) }
         : url.endsWith("/repos/example/tracker/contents/.github/agentic-job/pools.json") ? { body: { encoding: "base64", size: 200, content: Buffer.from(JSON.stringify(pools)).toString("base64"), html_url: "https://github.com/example/tracker/blob/main/.github/agentic-job/pools.json" } } : undefined);

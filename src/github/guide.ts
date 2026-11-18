@@ -1,6 +1,6 @@
 // Review guides: where a reviewer agent thinks this PR needs a close
 // read. bin/bot-review-guide in homegit posts one as a COMMENT review by
-// jmarrero-bot, whose body ends with the guide as JSON in an HTML
+// cgwalters-bot, whose body ends with the guide as JSON in an HTML
 // comment marker. The app trusts only the bot's reviews, only for the
 // head the guide names, and shows everything in it as plain text: the
 // guide is advice written by a model that read untrusted code, so it
@@ -210,9 +210,4 @@ export function worst(hs: readonly Hotspot[]): Severity | undefined {
   let out: Severity | undefined;
   for (const h of hs) if (out === undefined || SEVERITY_RANK[h.severity] < SEVERITY_RANK[out]) out = h.severity;
   return out;
-}
-
-/** Whether a skim entry covers the whole file. */
-export function skimsWholeFile(s: Skim): boolean {
-  return s.start === undefined;
 }

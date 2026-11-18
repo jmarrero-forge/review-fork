@@ -1,17 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { type Item, parseItem } from "../src/github/board.ts";
+import { parseItem } from "../src/github/board.ts";
 import {
-  buildTriage,
   decisionLabel,
   parseDecision,
   parseUnblocks,
   shortRef,
   sortDecisions,
-  triageOrder,
-  UNTRIAGED,
-  verdictOf,
-  verdictTargetOf,
 } from "../src/github/triage.ts";
 import { rawBoardItem } from "./helpers.ts";
 
@@ -32,78 +27,12 @@ describe("triage fields", () => {
   });
 });
 
-describe("verdictOf", () => {
-  const cases: [string | undefined, string | undefined][] = [
-    ["keep", "keep"],
-    ["Merge", "merge"],
-    ["close-duplicate", "close"],
-    ["park", "park"],
-    ["parking", undefined],
-    ["", undefined],
-    [undefined, undefined],
-  ];
-  for (const [v, want] of cases) {
-    it(JSON.stringify(v), () => assert.equal(verdictOf(v === undefined ? {} : { verdict: v }), want));
-  }
-  it("shows a target only for merge and close", () => {
-    const t = "https://github.com/o/r/issues/2";
-    assert.equal(verdictTargetOf({ verdict: "merge", verdictTarget: t }), t);
-    assert.equal(verdictTargetOf({ verdict: "close", verdictTarget: t }), t);
-    assert.equal(verdictTargetOf({ verdict: "keep", verdictTarget: t }), undefined);
-  });
-});
-
-describe("buildTriage", () => {
-  const items: Item[] = [
-    item(1, { Status: "Draft", Priority: "P1", Theme: "harness", Verdict: "keep" }),
-    item(2, { Status: "Needs human", Priority: "P0", Theme: "composefs-stable", Verdict: "keep" }),
-    item(3, { Status: "Done", Priority: "P0", Theme: "composefs-stable", Verdict: "keep" }),
-    item(4, { Status: "Todo", Priority: "P2", Theme: "composefs-stable", Verdict: "close", "Verdict target": "https://github.com/o/r/issues/9" }),
-    item(5, { Priority: "P0" }),
-    item(6, { Status: "Todo", Theme: "something-new", Verdict: "park" }),
-    item(7, { Status: "Todo", Priority: "P1", Theme: "composefs-stable" }),
-  ];
-
-  it("puts open P0 items in the lane, whatever their status or theme", () => {
-    assert.deepEqual(buildTriage(items).p0.map((i) => i.id), [2, 5]);
-  });
-
-  it("groups by theme in the board's order, unknown themes last, P0 first within one", () => {
-    const t = buildTriage(items);
-    assert.deepEqual(
-      t.themes.map((g) => [g.theme, g.items.map((i) => i.id)]),
-      [
-        ["composefs-stable", [2, 7, 4]],
-        ["harness", [1]],
-        ["something-new", [6]],
-      ],
-    );
-    assert.equal(t.untriaged.theme, UNTRIAGED);
-    assert.deepEqual(t.untriaged.items.map((i) => i.id), [5]);
-    assert.equal(t.total, 6);
-    assert.deepEqual(t.themes[0]?.counts, { keep: 1, merge: 0, park: 0, close: 1, none: 1 });
-    assert.deepEqual(t.counts, { keep: 2, merge: 0, park: 1, close: 1, none: 2 });
-  });
-
-  it("filters by verdict, keeping the counts of everything", () => {
-    const t = buildTriage(items, "close");
-    assert.deepEqual(t.themes.map((g) => g.shown.map((i) => i.id)), [[4], [], []]);
-    assert.equal(t.themes[0]?.items.length, 3);
-    assert.deepEqual(buildTriage(items, "none").untriaged.shown.map((i) => i.id), [5]);
-  });
-
-  it("lists the items in the view's order, each once: the P0 lane, then the shown items per group", () => {
-    assert.deepEqual(triageOrder(buildTriage(items)).map((i) => i.id), [2, 5, 7, 4, 1, 6]);
-    assert.deepEqual(triageOrder(buildTriage(items, "close")).map((i) => i.id), [2, 5, 4]);
-  });
-});
-
 describe("parseUnblocks", () => {
   const cases: [string, string, string[]][] = [
     [
       "a list after the line, as bot-board writes it",
-      "Blocks: https://github.com/jmarrero-forge/tracker/issues/1\n\nUnblocks:\n- https://github.com/jmarrero-forge/bootc/pull/15\n- https://github.com/bootc-dev/bootc/pull/2516\n\nQ: Promote now?",
-      ["https://github.com/jmarrero-forge/bootc/pull/15", "https://github.com/bootc-dev/bootc/pull/2516"],
+      "Blocks: https://github.com/cgwalters-forge/tracker/issues/1\n\nUnblocks:\n- https://github.com/cgwalters-forge/bootc/pull/15\n- https://github.com/bootc-dev/bootc/pull/2516\n\nQ: Promote now?",
+      ["https://github.com/cgwalters-forge/bootc/pull/15", "https://github.com/bootc-dev/bootc/pull/2516"],
     ],
     [
       "on the line, comma separated, in code spans, duplicates dropped",
@@ -124,13 +53,13 @@ describe("parseUnblocks", () => {
 
 describe("parseDecision", () => {
   const body = [
-    "Blocks: https://github.com/jmarrero-forge/tracker/issues/160",
+    "Blocks: https://github.com/cgwalters-forge/tracker/issues/160",
     "",
     "Declaring stable while upgrades break invites bug reports.",
     "",
     "Unblocks:",
-    "- https://github.com/jmarrero-forge/bootc/pull/15",
-    "- https://github.com/jmarrero-forge/tracker/issues/160",
+    "- https://github.com/cgwalters-forge/bootc/pull/15",
+    "- https://github.com/cgwalters-forge/tracker/issues/160",
     "",
     "Q: Promote forge bootc#15 now, or after bootc#2516?",
     "",
@@ -160,7 +89,7 @@ describe("parseDecision", () => {
       ],
     );
     assert.equal(d.question.optionsProblem, undefined);
-    assert.deepEqual(d.unblocks, ["https://github.com/jmarrero-forge/bootc/pull/15", "https://github.com/jmarrero-forge/tracker/issues/160"]);
+    assert.deepEqual(d.unblocks, ["https://github.com/cgwalters-forge/bootc/pull/15", "https://github.com/cgwalters-forge/tracker/issues/160"]);
   });
 
   it("keeps a title without a D-number whole", () => {
@@ -178,8 +107,8 @@ describe("parseDecision", () => {
 
 describe("shortRef", () => {
   const cases: [string, string][] = [
-    ["https://github.com/jmarrero-forge/tracker/issues/12", "tracker#12"],
-    ["https://github.com/jmarrero-forge/bootc/pull/15", "forge bootc#15"],
+    ["https://github.com/cgwalters-forge/tracker/issues/12", "tracker#12"],
+    ["https://github.com/cgwalters-forge/bootc/pull/15", "forge bootc#15"],
     ["https://github.com/bootc-dev/bootc/pull/2516", "bootc#2516"],
     ["https://gist.github.com/x/abc", "https://gist.github.com/x/abc"],
   ];

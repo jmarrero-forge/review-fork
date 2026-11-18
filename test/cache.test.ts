@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { IDBFactory } from "fake-indexeddb";
 import { CacheMiss, type Fetch, GitHub } from "../src/github/api.ts";
 import { loadQueue } from "../src/github/backend.ts";
-import { cachedLabel, type CacheOptions, type EntryMeta, forgetCache, openCache, type PersistentStore, ResponseCache, staleAfterWrite, tokenHash } from "../src/github/cache.ts";
+import { type CacheOptions, type EntryMeta, forgetCache, openCache, type PersistentStore, ResponseCache, staleAfterWrite, tokenHash } from "../src/github/cache.ts";
 import { composeReview } from "../src/github/forge.ts";
 import { deleteCacheDatabase, IdbStore } from "../src/github/idbstore.ts";
 import { submitReview } from "../src/github/prs.ts";
@@ -299,9 +299,9 @@ describe("a 401", () => {
 describe("the approve guard", () => {
   const HEAD = "c".repeat(40);
   const MOVED = "d".repeat(40);
-  const ref = { owner: "jmarrero-forge", repo: "widget", number: 7 };
-  const PULL = `${API}/repos/jmarrero-forge/widget/pulls/7`;
-  const pull = (sha: string) => ({ number: 7, html_url: "https://github.com/jmarrero-forge/widget/pull/7", state: "open", head: { sha }, base: {} });
+  const ref = { owner: "cgwalters-forge", repo: "widget", number: 7 };
+  const PULL = `${API}/repos/cgwalters-forge/widget/pulls/7`;
+  const pull = (sha: string) => ({ number: 7, html_url: "https://github.com/cgwalters-forge/widget/pull/7", state: "open", head: { sha }, base: {} });
 
   it("reads the head from GitHub, never the cache", async () => {
     const factory = new IDBFactory();
@@ -310,7 +310,7 @@ describe("the approve guard", () => {
       if (method === "GET" && url === PULL) return etagged(pull(HEAD), '"h1"');
       return undefined;
     });
-    await s.gh.get("/repos/jmarrero-forge/widget/pulls/7");
+    await s.gh.get("/repos/cgwalters-forge/widget/pulls/7");
     await s.cache.flushed();
     // ...but on GitHub it moved, with the same ETag, which a conditional read would trust.
     const later = await session(factory, (method, url) => {
@@ -332,19 +332,6 @@ describe("the approve guard", () => {
   });
 });
 
-describe("cachedLabel", () => {
-  const cases: [number, string][] = [
-    [0, "cached · just now"],
-    [59_000, "cached · just now"],
-    [5 * 60_000, "cached · 5 min ago"],
-    [119 * 60_000, "cached · 119 min ago"],
-    [3 * 3600_000, "cached · 3 h ago"],
-    [3 * DAY, "cached · 3 d ago"],
-    [-60_000, "cached · just now"],
-  ];
-  for (const [ago, want] of cases) it(want, () => assert.equal(cachedLabel(T0 - ago, T0), want));
-});
-
 describe("staleAfterWrite", () => {
   it("ignores writes outside an issue or PR", () => {
     assert.equal(staleAfterWrite("/gists")("/search/issues?q=x"), false);
@@ -359,7 +346,7 @@ describe("staleAfterWrite", () => {
     });
     const gh = new GitHub(token, fetchImpl, new ResponseCache());
     await loadQueue(gh);
-    await gh.send("POST", "/repos/jmarrero-forge/tracker/issues/7/comments", { body: "A" });
+    await gh.send("POST", "/repos/cgwalters-forge/tracker/issues/7/comments", { body: "A" });
     calls.length = 0;
     await loadQueue(gh);
     const items = calls.find((c) => c.url.includes("/items"));

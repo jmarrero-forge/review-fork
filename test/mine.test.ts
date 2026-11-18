@@ -14,7 +14,6 @@ import {
   identityProblem,
   joinBody,
   hasGeneratedBy,
-  lineDiff,
   LLMS_TRAILER,
   type MineEdit,
   mineRefusal,
@@ -31,15 +30,15 @@ import type { PrDetail } from "../src/github/prs.ts";
 import type { Recorded } from "./helpers.ts";
 
 const API = "https://api.github.com";
-const REPO = "jmarrero-forge/widget";
+const REPO = "cgwalters-forge/widget";
 const BRANCH = "bot/fix";
 const BASE = "0".repeat(40);
 const TREE1 = "a".repeat(40);
 const TREE2 = "b".repeat(40);
 const META = "<!-- bot-meta -->\n---\n\n- Upstream: `up/widget`, base `main`\n- Board item: `PVTI_x`\n<!-- /bot-meta -->";
 const BODY = `Fix the widget.\n\n${LLMS_TRAILER}\n\n${META}`;
-const ME = { name: "Joseph Marrero Corchado", email: "jmarrero@redhat.com" };
-const BOT = { name: "Joseph Marrero Corchado (automation)", email: "jmarrero+llm@gmail.com", date: "2026-09-01T10:00:00Z" };
+const ME = { name: "Colin Walters", email: "walters@verbum.org" };
+const BOT = { name: "Colin Walters (automation)", email: "walters+llm@verbum.org", date: "2026-09-01T10:00:00Z" };
 
 const sha = (s: string) => createHash("sha1").update(s).digest("hex");
 
@@ -53,12 +52,12 @@ const C2 = gitCommit("widget: Use the knob\n\nBecause.\n\nGenerated-by: AI", TRE
 
 function detail(over: Partial<PrDetail> = {}): PrDetail {
   return {
-    ref: { owner: "jmarrero-forge", repo: "widget", number: 7 },
+    ref: { owner: "cgwalters-forge", repo: "widget", number: 7 },
     url: `https://github.com/${REPO}/pull/7`,
     updatedAt: "2026-09-01T10:00:00Z",
     title: "widget: Use a knob",
     body: BODY,
-    author: "jmarrero-bot",
+    author: "cgwalters-bot",
     state: "open",
     draft: true,
     head: C2.sha,
@@ -70,7 +69,7 @@ function detail(over: Partial<PrDetail> = {}): PrDetail {
     deletions: 0,
     changedFiles: 1,
     commitCount: 2,
-    commits: [C1, C2].map((c) => ({ sha: c.sha, parent: c.parents[0]?.sha as string, url: "https://github.com/c", message: c.message, author: "jmarrero-bot" })),
+    commits: [C1, C2].map((c) => ({ sha: c.sha, parent: c.parents[0]?.sha as string, url: "https://github.com/c", message: c.message, author: "cgwalters-bot" })),
     files: [],
     checks: [],
     verdict: { state: "none" },
@@ -204,17 +203,6 @@ describe("text helpers", () => {
     assert.equal(normalizeMessage("  \n"), "");
   });
 
-  it("diffs lines", () => {
-    assert.deepEqual(lineDiff("a\nb\nc", "a\nx\nc"), [
-      { kind: "same", text: "a" },
-      { kind: "add", text: "x" },
-      { kind: "del", text: "b" },
-      { kind: "same", text: "c" },
-    ]);
-    assert.deepEqual(lineDiff("same\n", "same"), [{ kind: "same", text: "same" }]);
-    assert.deepEqual(lineDiff("a", "a\nb").map((l) => l.kind), ["same", "add"]);
-  });
-
   it("checks identities", () => {
     assert.equal(identityProblem(ME), undefined);
     assert.match(identityProblem({ name: "", email: ME.email }) ?? "", /name is empty/);
@@ -228,8 +216,8 @@ describe("mineRefusal", () => {
     ["a forge PR by the bot", {}, undefined],
     ["a closed PR", { state: "closed" }, /is closed/],
     ["a repository that isn't a fork", { parent: "" }, /is not a fork/],
-    ["another org", { ref: { owner: "bootc-dev", repo: "widget", number: 7 } }, /only PRs in jmarrero-forge/],
-    ["someone else's PR", { author: "someone" }, /only jmarrero-bot's/],
+    ["another org", { ref: { owner: "bootc-dev", repo: "widget", number: 7 } }, /only PRs in cgwalters-forge/],
+    ["someone else's PR", { author: "someone" }, /only cgwalters-bot's/],
     ["a branch in another repository", { headRepo: "someone/widget" }, /branch is in someone\/widget/],
     ["a non-bot branch", { headRef: "main" }, /not a bot\/ branch/],
     ["no bot-meta", { body: "Plain" }, /no bot-meta/],

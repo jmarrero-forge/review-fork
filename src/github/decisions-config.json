@@ -1,4 +1,5 @@
 {
-  "document": null,
-  "legacyQuestions": true
+  "document": { "repo": "cgwalters-forge/operator", "number": 1, "resolve": true },
+  "legacyQuestions": true,
+  "inbox": true
 }
